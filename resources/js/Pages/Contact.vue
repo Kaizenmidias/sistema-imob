@@ -1,0 +1,143 @@
+<template>
+  <Layout>
+    <!-- Internal Hero -->
+    <section class="bg-gradient-to-r from-blue-800 to-blue-900 text-white py-16">
+      <div class="container mx-auto px-4">
+        <h1 class="text-4xl font-bold text-center">Contato</h1>
+        <div class="flex justify-center mt-4 text-sm">
+          <span><a href="/" class="hover:text-blue-200">Início</a></span>
+          <span class="mx-2">/</span>
+          <span>Contato</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="py-16 bg-gray-50">
+      <div class="container mx-auto px-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <!-- Contact Info -->
+          <div class="space-y-8">
+            <h2 class="text-3xl font-bold text-gray-800">Entre em Contato</h2>
+            <p class="text-gray-600 text-lg">
+              Estamos aqui para ajudar! Entre em contato conosco através dos canais abaixo ou envie uma mensagem.
+            </p>
+            
+            <div class="space-y-6">
+              <div class="flex items-start space-x-4">
+                <div class="p-3 bg-blue-100 rounded-full">
+                  <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-800">Telefone</h3>
+                  <p class="text-gray-600">(11) 99999-9999</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start space-x-4">
+                <div class="p-3 bg-blue-100 rounded-full">
+                  <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-800">E-mail</h3>
+                  <p class="text-gray-600">contato@imobiliaria.com.br</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start space-x-4">
+                <div class="p-3 bg-blue-100 rounded-full">
+                  <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-800">Endereço</h3>
+                  <p class="text-gray-600">Rua Exemplo, 123 - Bairro Centro, São Paulo - SP</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Contact Form -->
+          <div class="bg-white rounded-xl shadow-lg p-8">
+            <form @submit.prevent="submitForm" class="space-y-6">
+              <div>
+                <label class="block text-gray-700 font-medium mb-2">Nome</label>
+                <input 
+                  type="text" 
+                  v-model="form.name" 
+                  placeholder="Seu nome completo" 
+                  class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+              <div>
+                <label class="block text-gray-700 font-medium mb-2">Telefone</label>
+                <input 
+                  type="tel" 
+                  v-model="form.phone" 
+                  placeholder="(11) 99999-9999" 
+                  class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+              <div>
+                <label class="block text-gray-700 font-medium mb-2">E-mail</label>
+                <input 
+                  type="email" 
+                  v-model="form.email" 
+                  placeholder="seuemail@exemplo.com" 
+                  class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+              <div>
+                <label class="block text-gray-700 font-medium mb-2">Mensagem</label>
+                <textarea 
+                  v-model="form.message" 
+                  rows="5" 
+                  placeholder="Sua mensagem..." 
+                  class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                ></textarea>
+              </div>
+              <button 
+                type="submit" 
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+              >
+                Enviar Mensagem
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </Layout>
+</template>
+
+<script setup>
+import { ref } from 'vue';
+import Layout from '@/Shared/Layout.vue';
+
+const form = ref({
+  name: '',
+  phone: '',
+  email: '',
+  message: '',
+});
+
+function submitForm() {
+  alert('Mensagem enviada com sucesso! Entraremos em contato em breve.');
+  form.value = {
+    name: '',
+    phone: '',
+    email: '',
+    message: '',
+  };
+}
+</script>

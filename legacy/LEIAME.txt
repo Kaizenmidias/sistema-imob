@@ -1,0 +1,49 @@
+=========================================
+SISTEMA IMOBILIÁRIO
+=========================================
+
+PASSO A PASSO PARA INSTALAÇÃO:
+
+1. BANCO DE DADOS:
+   - Crie um banco de dados MySQL (nome sugerido: portal_imobiliario)
+   - Importe o arquivo database.sql para criar as tabelas e dados iniciais
+
+2. CONFIGURAÇÕES:
+   - Edite o arquivo includes/config.php:
+     * DB_HOST: servidor do banco (normalmente localhost)
+     * DB_NAME: nome do banco de dados
+     * DB_USER: usuário do MySQL
+     * DB_PASS: senha do MySQL
+     * BASE_URL: URL do seu site (ex: https://seusite.com.br)
+
+3. LOGIN NO PAINEL ADMINISTRATIVO:
+   - Acesse: seu-site.com.br/admin/
+   - Usuário padrão: admin@exemplo.com
+   - Senha padrão: admin123 (⚠️ ALTERE IMEDIATAMENTE!)
+
+4. DADOS DA EMPRESA:
+   - No painel admin, vá em "Configurações" para definir:
+     * Nome da imobiliária
+     * Dados de contato
+     * Scripts de integração (Google Analytics, etc.)
+
+5. URL AMIGÁVEIS (.htaccess):
+   - O arquivo .htaccess já está configurado
+   - Certifique-se que o mod_rewrite está ativado no Apache
+
+6. FEED XML (para portais):
+   - Acesse: seu-site.com.br/feed/imoveis.xml
+   - Integre com Zap Imóveis, Viva Real, etc.
+
+
+TECNOLOGIAS UTILIZADAS:
+- PHP 7.0+
+- MySQL 5.7+
+- Tailwind CSS (via CDN)
+- Sem dependências complicadas!
+
+
+SEGURANÇA:
+- Sempre use senhas fortes
+- Proteja a pasta admin com .htpasswd extra se quiser
+- Mantenha o PHP e MySQL atualizados

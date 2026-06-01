@@ -1,0 +1,18 @@
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Feed XML
+RewriteRule ^feed/imoveis\.xml$ feed/imoveis.xml.php [L,QSA]
+
+# URL para página de imóvel
+RewriteRule ^imovel/([a-z0-9-]+)$ imovel.php?slug=$1 [L,QSA]
+
+# URL para página de busca
+RewriteRule ^busca$ busca.php [L,QSA]
+
+# URL para sitemap
+RewriteRule ^sitemap\.xml$ sitemap.xml.php [L,QSA]
+
+# URL para páginas
+RewriteRule ^pagina/([a-z0-9-]+)$ pagina.php?slug=$1 [L,QSA]
