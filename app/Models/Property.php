@@ -39,13 +39,27 @@ class Property extends Model
         'condominio',
         'iptu',
         'destaque',
+        'show_in_home_selecao_especial',
+        'show_in_home_mais_procurados',
+        'show_in_home_visto_recentemente',
         'ativo',
         'data_modificacao_xml',
+        'business_type_id',
     ];
+
+    public function businessType(): BelongsTo
+    {
+        return $this->belongsTo(BusinessType::class);
+    }
 
     public function propertyType(): BelongsTo
     {
         return $this->belongsTo(PropertyType::class, 'tipo_propriedade_id');
+    }
+
+    public function specialCategories(): BelongsToMany
+    {
+        return $this->belongsToMany(SpecialCategory::class, 'property_special_category', 'property_id', 'special_category_id');
     }
 
     public function features(): BelongsToMany

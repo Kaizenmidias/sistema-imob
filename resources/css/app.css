@@ -1,3 +1,110 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --site-primary: #1e3a8a;
+  --site-secondary: #f97316;
+  --site-button: #f97316;
+  --site-footer-bg: #111827;
+  --site-font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --site-font-size-text: 16px;
+  --site-font-size-title: 40px;
+  --site-home-overlay-color: #0f172a;
+  --site-home-overlay-opacity: 0.7;
+}
+
+html {
+  font-size: var(--site-font-size-text);
+}
+
+body {
+  font-family: var(--site-font-family);
+}
+
+.site-bg-primary {
+  background-color: var(--site-primary) !important;
+}
+
+.site-bg-secondary {
+  background-color: var(--site-secondary) !important;
+}
+
+.site-bg-button {
+  background-color: var(--site-button) !important;
+}
+
+.site-text-primary {
+  color: var(--site-primary) !important;
+}
+
+.site-text-secondary {
+  color: var(--site-secondary) !important;
+}
+
+.site-footer-bg {
+  background-color: var(--site-footer-bg) !important;
+}
+
+.site-button {
+  background-color: var(--site-button) !important;
+  color: #ffffff !important;
+}
+
+.site-button:hover {
+  filter: brightness(0.95);
+}
+
+.site-title {
+  font-size: var(--site-font-size-title) !important;
+  line-height: 1.1;
+}
+
+body.is-site .bg-blue-900,
+body.is-site .bg-blue-800,
+body.is-site .bg-blue-700,
+body.is-site .bg-blue-600 {
+  background-color: var(--site-primary) !important;
+}
+
+body.is-site .text-blue-900,
+body.is-site .text-blue-800,
+body.is-site .text-blue-700,
+body.is-site .text-blue-600 {
+  color: var(--site-primary) !important;
+}
+
+body.is-site .bg-orange-600,
+body.is-site .bg-orange-500,
+body.is-site .bg-orange-400 {
+  background-color: var(--site-secondary) !important;
+}
+
+body.is-site .text-orange-600,
+body.is-site .text-orange-500,
+body.is-site .text-orange-400 {
+  color: var(--site-secondary) !important;
+}
+
+body.is-site .hover\\:bg-blue-800:hover,
+body.is-site .hover\\:bg-blue-700:hover,
+body.is-site .hover\\:bg-blue-600:hover {
+  background-color: var(--site-primary) !important;
+  filter: brightness(0.95);
+}
+
+body.is-site .hover\\:bg-orange-600:hover,
+body.is-site .hover\\:bg-orange-500:hover {
+  background-color: var(--site-secondary) !important;
+  filter: brightness(0.95);
+}
+
+body.is-site .hover\\:text-blue-200:hover,
+body.is-site .hover\\:text-blue-900:hover {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+body.is-site .focus\\:ring-blue-500:focus,
+body.is-site .focus\\:ring-blue-600:focus {
+  --tw-ring-color: var(--site-primary) !important;
+}

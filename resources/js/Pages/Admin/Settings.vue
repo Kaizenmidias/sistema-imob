@@ -8,22 +8,31 @@
         <div class="space-y-4">
           <div>
             <label class="block text-gray-700 mb-2 text-sm font-medium">Nome do Site</label>
-            <input type="text" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="Imobiliária" />
+            <input v-model="form.nome_empresa" type="text" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="Imobiliária" />
+            <div v-if="form.errors.nome_empresa" class="text-sm text-red-600 mt-1">{{ form.errors.nome_empresa }}</div>
           </div>
           <div>
             <label class="block text-gray-700 mb-2 text-sm font-medium">Telefone</label>
-            <input type="text" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="(00) 00000-0000" />
+            <input v-model="form.telefone" type="text" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="(00) 00000-0000" />
+            <div v-if="form.errors.telefone" class="text-sm text-red-600 mt-1">{{ form.errors.telefone }}</div>
           </div>
           <div>
             <label class="block text-gray-700 mb-2 text-sm font-medium">E-mail</label>
-            <input type="email" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="contato@site.com" />
+            <input v-model="form.email_contato" type="email" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="contato@site.com" />
+            <div v-if="form.errors.email_contato" class="text-sm text-red-600 mt-1">{{ form.errors.email_contato }}</div>
           </div>
           <div>
             <label class="block text-gray-700 mb-2 text-sm font-medium">WhatsApp</label>
-            <input type="text" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="(00) 00000-0000" />
+            <input v-model="form.whatsapp" type="text" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="(00) 00000-0000" />
+            <div v-if="form.errors.whatsapp" class="text-sm text-red-600 mt-1">{{ form.errors.whatsapp }}</div>
+          </div>
+          <div>
+            <label class="block text-gray-700 mb-2 text-sm font-medium">Endereço</label>
+            <input v-model="form.endereco" type="text" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="Rua, número - Cidade/UF" />
+            <div v-if="form.errors.endereco" class="text-sm text-red-600 mt-1">{{ form.errors.endereco }}</div>
           </div>
           <div class="pt-4">
-            <button class="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded-lg font-semibold transition">Salvar Alterações</button>
+            <button type="button" :disabled="form.processing" class="bg-blue-900 hover:bg-blue-800 disabled:opacity-60 text-white px-6 py-2 rounded-lg font-semibold transition" @click="save">Salvar Alterações</button>
           </div>
         </div>
       </div>
@@ -33,18 +42,21 @@
         <div class="space-y-4">
           <div>
             <label class="block text-gray-700 mb-2 text-sm font-medium">Instagram</label>
-            <input type="url" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="https://instagram.com/usuario" />
+            <input v-model="form.instagram_url" type="url" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="https://instagram.com/usuario" />
+            <div v-if="form.errors.instagram_url" class="text-sm text-red-600 mt-1">{{ form.errors.instagram_url }}</div>
           </div>
           <div>
             <label class="block text-gray-700 mb-2 text-sm font-medium">Facebook</label>
-            <input type="url" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="https://facebook.com/usuario" />
+            <input v-model="form.facebook_url" type="url" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="https://facebook.com/usuario" />
+            <div v-if="form.errors.facebook_url" class="text-sm text-red-600 mt-1">{{ form.errors.facebook_url }}</div>
           </div>
           <div>
             <label class="block text-gray-700 mb-2 text-sm font-medium">LinkedIn</label>
-            <input type="url" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="https://linkedin.com/in/usuario" />
+            <input v-model="form.linkedin_url" type="url" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="https://linkedin.com/in/usuario" />
+            <div v-if="form.errors.linkedin_url" class="text-sm text-red-600 mt-1">{{ form.errors.linkedin_url }}</div>
           </div>
           <div class="pt-4">
-            <button class="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded-lg font-semibold transition">Salvar Alterações</button>
+            <button type="button" :disabled="form.processing" class="bg-blue-900 hover:bg-blue-800 disabled:opacity-60 text-white px-6 py-2 rounded-lg font-semibold transition" @click="save">Salvar Alterações</button>
           </div>
         </div>
       </div>
@@ -53,12 +65,28 @@
 </template>
 
 <script setup>
+import { useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
 
 const props = defineProps({
   settings: {
-    type: Array,
-    default: () => [],
+    type: Object,
+    default: () => ({}),
   },
 });
+
+const form = useForm({
+  nome_empresa: props.settings?.nome_empresa || '',
+  telefone: props.settings?.telefone || '',
+  email_contato: props.settings?.email_contato || '',
+  whatsapp: props.settings?.whatsapp || '',
+  endereco: props.settings?.endereco || '',
+  instagram_url: props.settings?.instagram_url || '',
+  facebook_url: props.settings?.facebook_url || '',
+  linkedin_url: props.settings?.linkedin_url || '',
+});
+
+const save = () => {
+  form.post('/admin/settings', { method: 'put', forceFormData: true });
+};
 </script>

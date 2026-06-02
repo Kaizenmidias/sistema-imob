@@ -16,17 +16,17 @@
         <!-- Main Photo -->
         <div class="md:col-span-2 relative rounded-xl overflow-hidden shadow-lg">
           <img
-            :src="property.photos[activePhotoIndex]"
+            :src="photos[activePhotoIndex]"
             :alt="property.title"
             class="w-full h-96 object-cover"
           />
         </div>
         <!-- Thumbnails -->
         <div class="grid grid-cols-2 gap-4">
-          <div v-for="(photo, index) in property.photos.slice(0, 4)" :key="index" class="relative rounded-xl overflow-hidden shadow-md cursor-pointer hover:opacity-80 transition">
+          <div v-for="(photo, index) in photos.slice(0, 4)" :key="index" class="relative rounded-xl overflow-hidden shadow-md cursor-pointer hover:opacity-80 transition">
             <img :src="photo" :alt="`Foto ${index + 1}`" class="w-full h-44 object-cover" @click="activePhotoIndex = index" />
-            <div v-if="index === 3 && property.photos.length > 4" class="absolute inset-0 bg-black/70 flex items-center justify-center text-white text-2xl font-bold">
-              +{{ property.photos.length - 4 }}
+            <div v-if="index === 3 && photos.length > 4" class="absolute inset-0 bg-black/70 flex items-center justify-center text-white text-2xl font-bold">
+              +{{ photos.length - 4 }}
             </div>
           </div>
         </div>
@@ -44,7 +44,7 @@
               <div class="flex items-center gap-3 mb-2">
                 <span class="bg-blue-900 text-white px-4 py-1 rounded-full text-sm font-semibold">{{ property.code }}</span>
                 <span class="bg-orange-500 text-white px-4 py-1 rounded-full text-sm font-semibold">EXCLUSIVO</span>
-                <span class="bg-gray-200 text-gray-700 px-4 py-1 rounded-full text-sm font-semibold">{{ property.photos.length }} Fotos</span>
+                <span class="bg-gray-200 text-gray-700 px-4 py-1 rounded-full text-sm font-semibold">{{ photos.length }} Fotos</span>
               </div>
               <h1 class="text-2xl font-bold text-gray-800 mb-1">{{ property.title }}</h1>
               <p class="text-gray-600">{{ property.address }}</p>
@@ -218,7 +218,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import Layout from '@/Shared/Layout.vue';
 
 const props = defineProps({
@@ -229,6 +229,28 @@ const props = defineProps({
 });
 
 const activePhotoIndex = ref(0);
+
+const placeholderImage = `data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#0f172a"/>
+        <stop offset="1" stop-color="#1e3a8a"/>
+      </linearGradient>
+    </defs>
+    <rect width="1200" height="800" fill="url(#g)"/>
+    <rect x="130" y="140" width="940" height="520" rx="28" fill="rgba(255,255,255,0.10)"/>
+    <path d="M320 590l260-230 120 115 160-150 320 330H320z" fill="rgba(255,255,255,0.26)"/>
+    <circle cx="420" cy="340" r="58" fill="rgba(255,255,255,0.22)"/>
+    <text x="600" y="740" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="rgba(255,255,255,0.72)">Imagem indisponível</text>
+  </svg>`
+)}`;
+
+const photos = computed(() => {
+  const list = props.property?.photos ?? [];
+  if (Array.isArray(list) && list.length > 0) return list;
+  return [placeholderImage];
+});
 
 const contactForm = ref({
   name: '',

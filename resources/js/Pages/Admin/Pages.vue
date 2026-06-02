@@ -2,6 +2,13 @@
   <AdminLayout>
     <template #pageTitle>Páginas</template>
     
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-xl font-semibold text-gray-800">Lista de Páginas</h3>
+      <Link href="/admin/pages/create" class="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded-lg font-semibold transition">
+        Nova Página
+      </Link>
+    </div>
+
     <div class="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
       <table class="w-full">
         <thead class="bg-gray-50 border-b border-gray-200">
@@ -13,15 +20,24 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <tr v-for="page in pageList" :key="page.slug" class="hover:bg-gray-50">
+          <tr v-for="page in pages" :key="page.id" class="hover:bg-gray-50">
             <td class="px-6 py-4 font-semibold text-gray-800">{{ page.titulo }}</td>
             <td class="px-6 py-4 text-gray-600">{{ page.slug }}</td>
             <td class="px-6 py-4">
-              <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Ativo</span>
+              <span :class="page.ativo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-3 py-1 rounded-full text-xs font-semibold">
+                {{ page.ativo ? 'Ativo' : 'Inativo' }}
+              </span>
             </td>
             <td class="px-6 py-4">
-              <button @click="editPage(page.slug)" class="text-blue-600 hover:text-blue-800 font-medium">Editar</button>
+              <div class="flex items-center gap-4">
+                <Link :href="`/admin/pages/${page.id}`" class="text-blue-600 hover:text-blue-800 font-medium">Editar</Link>
+                <button type="button" class="text-gray-700 hover:text-gray-900 font-medium" @click="duplicate(page.id)">Duplicar</button>
+                <button type="button" class="text-red-600 hover:text-red-800 font-medium" @click="remove(page.id)">Excluir</button>
+              </div>
             </td>
+          </tr>
+          <tr v-if="pages.length === 0">
+            <td colspan="4" class="px-6 py-12 text-center text-gray-500">Nenhuma página cadastrada</td>
           </tr>
         </tbody>
       </table>
@@ -30,26 +46,21 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { Link, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
 
-const router = useRouter();
+defineProps({
+  pages: {
+    type: Array,
+    default: () => [],
+  },
+});
 
-const pageList = ref([
-  { titulo: 'Página Inicial', slug: 'home' },
-  { titulo: 'Imóveis', slug: 'imoveis' },
-  { titulo: 'Quem Somos', slug: 'quem-somos' },
-  { titulo: 'Off Market', slug: 'off-market' },
-  { titulo: 'Gestão Exclusiva', slug: 'gestao-exclusiva' },
-  { titulo: 'Calculadora', slug: 'calculadora' },
-  { titulo: 'Avalie seu Imóvel', slug: 'avalie-seu-imovel' },
-  { titulo: 'Corretor Parceiro', slug: 'corretor-parceiro' },
-  { titulo: 'Blog', slug: 'blog' },
-  { titulo: 'Contato', slug: 'contato' },
-]);
+const duplicate = (id) => {
+  router.post(`/admin/pages/${id}/duplicate`);
+};
 
-const editPage = (slug) => {
-  router.push('/admin/pages/' + slug);
+const remove = (id) => {
+  router.delete(`/admin/pages/${id}`);
 };
 </script>

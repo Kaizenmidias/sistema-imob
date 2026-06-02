@@ -21,7 +21,10 @@ class MenuItemSeeder extends Seeder
         ];
 
         foreach ($items as $item) {
-            MenuItem::create($item);
+            MenuItem::updateOrCreate(
+                ['url' => $item['url']],
+                $item
+            );
         }
     }
 }

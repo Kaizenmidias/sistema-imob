@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             PropertyTypeSeeder::class,
             PropertyFeatureSeeder::class,
+            BusinessTypeSeeder::class,
             SettingSeeder::class,
             PageSeeder::class,
             MenuItemSeeder::class,

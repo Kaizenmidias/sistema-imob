@@ -9,7 +9,7 @@ class PropertyFeatureSeeder extends Seeder
 {
     public function run(): void
     {
-        PropertyFeature::insert([
+        $items = [
             ['nome' => 'Piscina', 'slug' => 'piscina', 'icone' => '🏊', 'nome_xml' => 'Piscina'],
             ['nome' => 'Churrasqueira', 'slug' => 'churrasqueira', 'icone' => '🔥', 'nome_xml' => 'Churrasqueira'],
             ['nome' => 'Academia', 'slug' => 'academia', 'icone' => '🏋️', 'nome_xml' => 'Academia'],
@@ -20,6 +20,19 @@ class PropertyFeatureSeeder extends Seeder
             ['nome' => 'Elevador', 'slug' => 'elevador', 'icone' => '🛗', 'nome_xml' => 'Elevador'],
             ['nome' => 'Segurança 24h', 'slug' => 'seguranca-24h', 'icone' => '👮', 'nome_xml' => 'Seguranca24h'],
             ['nome' => 'Jardim', 'slug' => 'jardim', 'icone' => '🌳', 'nome_xml' => 'Jardim'],
-        ]);
+        ];
+
+        foreach ($items as $item) {
+            $slug = $item['slug'];
+            unset($item['slug']);
+
+            PropertyFeature::updateOrCreate(
+                ['slug' => $slug],
+                [
+                    ...$item,
+                    'slug' => $slug,
+                ]
+            );
+        }
     }
 }

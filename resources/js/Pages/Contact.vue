@@ -1,13 +1,17 @@
 <template>
   <Layout>
-    <!-- Internal Hero -->
-    <section class="bg-gradient-to-r from-blue-800 to-blue-900 text-white py-16">
-      <div class="container mx-auto px-4">
-        <h1 class="text-4xl font-bold text-center">Contato</h1>
+    <section class="relative text-white">
+      <div class="absolute inset-0">
+        <img :src="bannerImage" :alt="bannerTitle" class="w-full h-full object-cover" />
+        <div class="absolute inset-0" :style="{ backgroundColor: bannerOverlayColor, opacity: bannerOverlayOpacity }"></div>
+      </div>
+      <div class="relative container mx-auto px-4 py-16">
+        <h1 class="text-4xl font-bold text-center" :style="{ color: bannerTitleColor }">{{ bannerTitle }}</h1>
+        <p v-if="bannerSubtitle" class="mt-4 text-center max-w-3xl mx-auto" :style="{ color: bannerSubtitleColor }">{{ bannerSubtitle }}</p>
         <div class="flex justify-center mt-4 text-sm">
           <span><a href="/" class="hover:text-blue-200">Início</a></span>
           <span class="mx-2">/</span>
-          <span>Contato</span>
+          <span>{{ bannerTitle }}</span>
         </div>
       </div>
     </section>
@@ -22,6 +26,8 @@
             <p class="text-gray-600 text-lg">
               Estamos aqui para ajudar! Entre em contato conosco através dos canais abaixo ou envie uma mensagem.
             </p>
+
+            <div v-if="page?.conteudo" class="prose max-w-none" v-html="page.conteudo"></div>
             
             <div class="space-y-6">
               <div class="flex items-start space-x-4">
@@ -32,7 +38,7 @@
                 </div>
                 <div>
                   <h3 class="text-lg font-semibold text-gray-800">Telefone</h3>
-                  <p class="text-gray-600">(11) 99999-9999</p>
+                  <p class="text-gray-600">{{ settings?.telefone || '(11) 99999-9999' }}</p>
                 </div>
               </div>
               
@@ -44,7 +50,7 @@
                 </div>
                 <div>
                   <h3 class="text-lg font-semibold text-gray-800">E-mail</h3>
-                  <p class="text-gray-600">contato@imobiliaria.com.br</p>
+                  <p class="text-gray-600">{{ settings?.email_contato || 'contato@imobiliaria.com.br' }}</p>
                 </div>
               </div>
               
@@ -57,7 +63,7 @@
                 </div>
                 <div>
                   <h3 class="text-lg font-semibold text-gray-800">Endereço</h3>
-                  <p class="text-gray-600">Rua Exemplo, 123 - Bairro Centro, São Paulo - SP</p>
+                  <p class="text-gray-600">{{ settings?.endereco || 'Rua Exemplo, 123 - Bairro Centro, São Paulo - SP' }}</p>
                 </div>
               </div>
             </div>
@@ -108,7 +114,7 @@
               </div>
               <button 
                 type="submit" 
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+                class="w-full site-button font-semibold py-3 px-6 rounded-lg transition"
               >
                 Enviar Mensagem
               </button>
@@ -121,8 +127,43 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import Layout from '@/Shared/Layout.vue';
+
+const props = defineProps({
+  page: {
+    type: Object,
+    default: () => null,
+  },
+  settings: {
+    type: Object,
+    default: () => ({}),
+  },
+});
+
+const placeholderImage = `data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="600" viewBox="0 0 1600 600">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#0f172a"/>
+        <stop offset="1" stop-color="#1e3a8a"/>
+      </linearGradient>
+    </defs>
+    <rect width="1600" height="600" fill="url(#g)"/>
+    <text x="800" y="330" text-anchor="middle" font-family="Arial, sans-serif" font-size="44" fill="rgba(255,255,255,0.35)">Contato</text>
+  </svg>`
+)}`;
+
+const bannerImage = computed(() => props.page?.banner_image || placeholderImage);
+const bannerTitle = computed(() => props.page?.banner_title || 'Contato');
+const bannerSubtitle = computed(() => props.page?.banner_subtitle || '');
+const bannerTitleColor = computed(() => props.page?.banner_title_color || '#ffffff');
+const bannerSubtitleColor = computed(() => props.page?.banner_subtitle_color || 'rgba(255,255,255,0.85)');
+const bannerOverlayColor = computed(() => props.page?.banner_overlay_color || '#0f172a');
+const bannerOverlayOpacity = computed(() => {
+  const raw = Number(props.page?.banner_overlay_opacity ?? 70);
+  return Math.max(0, Math.min(100, raw)) / 100;
+});
 
 const form = ref({
   name: '',

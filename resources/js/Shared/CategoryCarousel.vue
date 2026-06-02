@@ -68,21 +68,37 @@ const startX = ref(0);
 const startPosition = ref(0);
 let maxScroll = 0;
 
+const placeholderImage = `data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#0b1220"/>
+        <stop offset="1" stop-color="#1d4ed8"/>
+      </linearGradient>
+    </defs>
+    <rect width="800" height="1000" fill="url(#g)"/>
+    <rect x="70" y="120" width="660" height="520" rx="28" fill="rgba(255,255,255,0.10)"/>
+    <path d="M210 560l190-170 90 85 110-105 210 220H210z" fill="rgba(255,255,255,0.26)"/>
+    <circle cx="290" cy="330" r="46" fill="rgba(255,255,255,0.22)"/>
+    <text x="400" y="760" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" fill="rgba(255,255,255,0.78)">Categoria</text>
+  </svg>`
+)}`;
+
 const categories = ref([
   {
-    id: 1, name: 'Retrofit', description: 'Reforme e transforme seu lar', image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&h=1000&fit=crop', link: '/imoveis?filter=retrofit' },
+    id: 1, name: 'Retrofit', description: 'Reforme e transforme seu lar', image: placeholderImage, link: '/imoveis?filter=retrofit' },
   {
-    id: 2, name: 'Mansões', description: 'Tamboré 1, 2 e 3', image: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=800&h=1000&fit=crop', link: '/imoveis?filter=mansoes' },
+    id: 2, name: 'Mansões', description: 'Tamboré 1, 2 e 3', image: placeholderImage, link: '/imoveis?filter=mansoes' },
   {
-    id: 3, name: 'Casas Alpha Central', description: 'Residenciais Alphaville Zero...', image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=1000&fit=crop', link: '/imoveis?filter=alpha' },
+    id: 3, name: 'Casas Alpha Central', description: 'Residenciais Alphaville Zero...', image: placeholderImage, link: '/imoveis?filter=alpha' },
   {
-    id: 4, name: 'Casas Térreas', description: 'Arquitetura rara, unic...', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=1000&fit=crop', link: '/imoveis?filter=terreo' },
+    id: 4, name: 'Casas Térreas', description: 'Arquitetura rara, unic...', image: placeholderImage, link: '/imoveis?filter=terreo' },
   {
-    id: 5, name: 'Villagios', description: 'Tamboré 4, 5, 6 e 7/Singular...', image: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=800&h=1000&fit=crop', link: '/imoveis?filter=villagios' },
+    id: 5, name: 'Villagios', description: 'Tamboré 4, 5, 6 e 7/Singular...', image: placeholderImage, link: '/imoveis?filter=villagios' },
   {
-    id: 6, name: 'Exclusividades', description: 'Nossas gestões exclusivas co...', image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&h=1000&fit=crop', link: '/imoveis?filter=exclusivos' },
+    id: 6, name: 'Exclusividades', description: 'Nossas gestões exclusivas co...', image: placeholderImage, link: '/imoveis?filter=exclusivos' },
   {
-    id: 7, name: 'Vistas Incríveis', description: 'Um quadro natural em cada janela', image: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&h=1000&fit=crop', link: '/imoveis?filter=vistas' }
+    id: 7, name: 'Vistas Incríveis', description: 'Um quadro natural em cada janela', image: placeholderImage, link: '/imoveis?filter=vistas' }
 ]);
 
 const startDrag = (e) => {

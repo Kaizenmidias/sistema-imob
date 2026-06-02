@@ -3,7 +3,7 @@
     <!-- Hero -->
     <section class="relative bg-gradient-to-r from-orange-600 to-orange-700 text-white py-24">
       <div class="absolute inset-0 opacity-20">
-        <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1920&h=800&fit=crop" alt="" class="w-full h-full object-cover" />
+        <img :src="placeholderImage" alt="" class="w-full h-full object-cover" />
       </div>
       <div class="container mx-auto px-4 relative z-10 text-center">
         <h1 class="text-4xl md:text-5xl font-bold mb-4">Venda Seu Imóvel</h1>
@@ -73,6 +73,19 @@
 <script setup>
 import { ref } from 'vue';
 import Layout from '@/Shared/Layout.vue';
+
+const placeholderImage = `data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="800" viewBox="0 0 1920 800">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#7c2d12"/>
+        <stop offset="1" stop-color="#ea580c"/>
+      </linearGradient>
+    </defs>
+    <rect width="1920" height="800" fill="url(#g)"/>
+    <text x="960" y="420" text-anchor="middle" font-family="Arial, sans-serif" font-size="54" fill="rgba(255,255,255,0.35)">Venda seu imóvel</text>
+  </svg>`
+)}`;
 
 const form = ref({
   name: '',

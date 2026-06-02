@@ -10,7 +10,7 @@
       <div class="container mx-auto px-4">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div v-for="i in 6" :key="i" class="bg-white rounded-xl shadow overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=250&fit=crop" alt="" class="w-full h-48 object-cover" />
+            <img :src="placeholderImage" alt="" class="w-full h-48 object-cover" />
             <div class="p-6">
               <span class="text-blue-600 text-sm font-semibold uppercase">Categoria</span>
               <h3 class="text-xl font-bold text-gray-800 mt-2">Título do Post {{ i }}</h3>
@@ -25,4 +25,17 @@
 </template>
 <script setup>
 import Layout from '@/Shared/Layout.vue';
+
+const placeholderImage = `data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="250" viewBox="0 0 400 250">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#0f172a"/>
+        <stop offset="1" stop-color="#047857"/>
+      </linearGradient>
+    </defs>
+    <rect width="400" height="250" fill="url(#g)"/>
+    <text x="200" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="rgba(255,255,255,0.7)">Blog</text>
+  </svg>`
+)}`;
 </script>

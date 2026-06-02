@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\MenuItem;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -37,7 +39,11 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
-            //
+            'menuItems' => fn () => MenuItem::query()
+                ->where('is_active', true)
+                ->orderBy('order')
+                ->get(['id', 'label', 'icon', 'url', 'order', 'is_active']),
+            'settings' => fn () => Setting::query()->pluck('valor', 'chave'),
         ];
     }
 }

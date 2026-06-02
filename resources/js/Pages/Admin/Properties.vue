@@ -4,9 +4,14 @@
     
     <div class="flex items-center justify-between mb-6">
       <h3 class="text-xl font-semibold text-gray-800">Lista de Imóveis</h3>
-      <button @click="goToCreate" class="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded-lg font-semibold transition">
-        Novo Imóvel
-      </button>
+      <div class="flex items-center gap-3">
+        <a href="/feed/imoveis.xml" target="_blank" rel="noopener" class="bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 px-6 py-2 rounded-lg font-semibold transition">
+          Exportar XML
+        </a>
+        <Link href="/admin/properties/create" class="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded-lg font-semibold transition">
+          Novo Imóvel
+        </Link>
+      </div>
     </div>
 
     <div class="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
@@ -38,8 +43,8 @@
             </td>
             <td class="px-6 py-4 text-gray-600">{{ property.propertyType?.nome_tipo || '-' }}</td>
             <td class="px-6 py-4">
-              <span :class="property.operacao === 'Venda' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'" class="px-3 py-1 rounded-full text-xs font-semibold">
-                {{ property.operacao }}
+              <span :class="operationBadgeClass(property.businessType?.name || property.operacao)" class="px-3 py-1 rounded-full text-xs font-semibold">
+                {{ property.businessType?.name || property.operacao }}
               </span>
             </td>
             <td class="px-6 py-4 font-semibold text-gray-800">R$ {{ formatPrice(property.valor) }}</td>
@@ -50,8 +55,8 @@
             </td>
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
-                <button class="text-blue-600 hover:text-blue-800 font-medium">Editar</button>
-                <button class="text-red-600 hover:text-red-800 font-medium">Excluir</button>
+                <Link :href="`/admin/properties/${property.id}/edit`" class="text-blue-600 hover:text-blue-800 font-medium">Editar</Link>
+                <button type="button" class="text-red-600 hover:text-red-800 font-medium" @click="remove(property.id)">Excluir</button>
               </div>
             </td>
           </tr>
@@ -67,7 +72,7 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router';
+import { Link, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
 
 const props = defineProps({
@@ -77,13 +82,17 @@ const props = defineProps({
   },
 });
 
-const router = useRouter();
-
-const goToCreate = () => {
-  router.push('/admin/properties/create');
-};
-
 const formatPrice = (value) => {
   return Number(value || 0).toLocaleString('pt-BR');
+};
+
+const operationBadgeClass = (operation) => {
+  if (operation === 'Comprar' || operation === 'Venda') return 'bg-green-100 text-green-700';
+  if (operation === 'Alugar' || operation === 'Aluguel') return 'bg-blue-100 text-blue-700';
+  return 'bg-orange-100 text-orange-700';
+};
+
+const remove = (id) => {
+  router.delete(`/admin/properties/${id}`);
 };
 </script>

@@ -22,7 +22,7 @@
             </p>
           </div>
           <div>
-            <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&h=400&fit=crop" alt="" class="rounded-xl shadow-lg w-full" />
+            <img :src="placeholderImage" alt="" class="rounded-xl shadow-lg w-full" />
           </div>
         </div>
       </div>
@@ -31,4 +31,17 @@
 </template>
 <script setup>
 import Layout from '@/Shared/Layout.vue';
+
+const placeholderImage = `data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#3b0764"/>
+        <stop offset="1" stop-color="#7c3aed"/>
+      </linearGradient>
+    </defs>
+    <rect width="600" height="400" fill="url(#g)"/>
+    <text x="300" y="215" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="rgba(255,255,255,0.7)">Off Market</text>
+  </svg>`
+)}`;
 </script>
