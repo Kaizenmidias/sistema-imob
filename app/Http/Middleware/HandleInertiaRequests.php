@@ -37,8 +37,18 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
+            'auth' => [
+                'user' => fn () => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'profile_photo_url' => !empty($user->profile_photo_path) ? url('/storage/' . ltrim($user->profile_photo_path, '/')) : null,
+                ] : null,
+            ],
             'menuItems' => fn () => MenuItem::query()
                 ->where('is_active', true)
                 ->orderBy('order')

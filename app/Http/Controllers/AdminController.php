@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -20,6 +21,7 @@ use App\Models\Lead;
 use App\Models\MenuItem;
 use App\Models\Setting;
 use App\Models\Page;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 
 class AdminController extends Controller
@@ -61,6 +63,63 @@ class AdminController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::route('login');
+    }
+
+    public function profile(): Response
+    {
+        $user = User::query()->find(Auth::id());
+
+        return Inertia::render('Admin/Profile', [
+            'user' => $user ? [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'profile_photo_url' => !empty($user->profile_photo_path) ? url('/storage/' . ltrim($user->profile_photo_path, '/')) : null,
+            ] : null,
+        ]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = User::query()->find(Auth::id());
+        if (!$user) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'profile_photo' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,svg', 'max:4096'],
+            'current_password' => ['nullable', 'string'],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        if (!empty($validated['password'])) {
+            if (empty($validated['current_password']) || !Hash::check($validated['current_password'], $user->password)) {
+                return Redirect::back()->withErrors([
+                    'current_password' => 'Senha atual inválida.',
+                ]);
+            }
+        }
+
+        $payload = [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+        ];
+
+        if (!empty($validated['password'])) {
+            $payload['password'] = $validated['password'];
+        }
+
+        if ($request->hasFile('profile_photo')) {
+            $file = $request->file('profile_photo');
+            $path = Storage::disk('public')->putFile("profiles/{$user->id}", $file);
+            $payload['profile_photo_path'] = $path;
+        }
+
+        $user->update($payload);
+
+        return Redirect::route('admin.profile');
     }
 
     public function index(): Response
