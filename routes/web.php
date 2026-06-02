@@ -52,6 +52,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::delete('/categories/special/{specialCategory}', [AdminController::class, 'destroySpecialCategory'])->name('special-categories.destroy');
     Route::get('/leads', [AdminController::class, 'leads'])->name('leads');
     Route::patch('/leads/{lead}', [AdminController::class, 'updateLead'])->name('leads.update');
+    Route::put('/leads/settings', [AdminController::class, 'updateLeadsSettings'])->name('leads.settings.update');
     Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
     Route::put('/profile', [AdminController::class, 'updateProfile'])->name('profile.update');
     Route::get('/appearance', [AdminController::class, 'appearance'])->name('appearance');

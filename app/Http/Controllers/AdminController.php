@@ -501,6 +501,48 @@ class AdminController extends Controller
 
         return Redirect::back();
     }
+
+    public function updateLeadsSettings(Request $request)
+    {
+        $validated = $request->validate([
+            'kanban_columns' => ['nullable', 'array'],
+            'kanban_columns.*' => ['string', 'max:60'],
+            'whatsapp_template' => ['nullable', 'string', 'max:2000'],
+            'email_subject_template' => ['nullable', 'string', 'max:255'],
+            'email_body_template' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        if (array_key_exists('kanban_columns', $validated) && is_array($validated['kanban_columns'])) {
+            $columns = array_values(array_filter(array_map(fn ($v) => trim((string) $v), $validated['kanban_columns']), fn ($v) => $v !== ''));
+            Setting::updateOrCreate(
+                ['chave' => 'leads_kanban_columns'],
+                ['valor' => json_encode($columns)]
+            );
+        }
+
+        if (array_key_exists('whatsapp_template', $validated)) {
+            Setting::updateOrCreate(
+                ['chave' => 'leads_whatsapp_template'],
+                ['valor' => (string) ($validated['whatsapp_template'] ?? '')]
+            );
+        }
+
+        if (array_key_exists('email_subject_template', $validated)) {
+            Setting::updateOrCreate(
+                ['chave' => 'leads_email_subject_template'],
+                ['valor' => (string) ($validated['email_subject_template'] ?? '')]
+            );
+        }
+
+        if (array_key_exists('email_body_template', $validated)) {
+            Setting::updateOrCreate(
+                ['chave' => 'leads_email_body_template'],
+                ['valor' => (string) ($validated['email_body_template'] ?? '')]
+            );
+        }
+
+        return Redirect::back();
+    }
     
     public function appearance(): Response
     {

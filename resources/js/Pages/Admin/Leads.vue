@@ -157,6 +157,25 @@
               </div>
             </div>
 
+            <div class="flex items-center gap-3">
+              <button
+                type="button"
+                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed"
+                :disabled="!selectedLead.telefone"
+                @click="openWhatsApp(selectedLead)"
+              >
+                WhatsApp
+              </button>
+              <button
+                type="button"
+                class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed"
+                :disabled="!selectedLead.email"
+                @click="openEmail(selectedLead)"
+              >
+                E-mail
+              </button>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
@@ -188,49 +207,67 @@
               <div class="text-sm font-semibold text-gray-700 mb-2">Mensagem</div>
               <pre class="text-sm text-gray-700 whitespace-pre-wrap">{{ selectedLead.mensagem }}</pre>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="border border-gray-200 rounded-xl p-4">
-                <div class="flex items-center justify-between gap-3 mb-3">
-                  <div class="text-sm font-semibold text-gray-700">WhatsApp</div>
-                  <button
-                    type="button"
-                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed"
-                    :disabled="!selectedLead.telefone"
-                    @click="openWhatsApp(selectedLead)"
-                  >
-                    Abrir
-                  </button>
-                </div>
-                <textarea
-                  v-model="whatsDraftById[selectedLead.id]"
-                  rows="5"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2"
-                  placeholder="Digite sua mensagem. Use [Nome] para inserir o nome do cliente."
-                ></textarea>
-              </div>
+    <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white rounded-xl shadow border border-gray-200 p-6">
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <div class="text-lg font-semibold text-gray-900">Colunas do CRM</div>
+          <button type="button" class="bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-lg font-semibold transition" @click="addColumn">
+            Adicionar coluna
+          </button>
+        </div>
 
-              <div class="border border-gray-200 rounded-xl p-4">
-                <div class="flex items-center justify-between gap-3 mb-3">
-                  <div class="text-sm font-semibold text-gray-700">E-mail</div>
-                  <button
-                    type="button"
-                    class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed"
-                    :disabled="!selectedLead.email"
-                    @click="openEmail(selectedLead)"
-                  >
-                    Abrir
-                  </button>
-                </div>
-                <input v-model="emailSubjectById[selectedLead.id]" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 mb-2" placeholder="Assunto" />
-                <textarea
-                  v-model="emailBodyById[selectedLead.id]"
-                  rows="4"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2"
-                  placeholder="Corpo do e-mail. Use [Nome] para inserir o nome do cliente."
-                ></textarea>
-              </div>
-            </div>
+        <div class="space-y-3">
+          <div v-for="col in columnsDraft" :key="col.id" class="flex items-center gap-3">
+            <input v-model="col.name" type="text" class="flex-1 border border-gray-300 rounded-lg px-4 py-3" placeholder="Nome da coluna" />
+            <button type="button" class="text-red-600 hover:text-red-700 font-semibold px-3 py-2" @click="removeColumn(col.id)">
+              Remover
+            </button>
+          </div>
+          <div v-if="columnsDraft.length === 0" class="text-sm text-gray-500">
+            Adicione pelo menos uma coluna.
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow border border-gray-200 p-6">
+        <div class="text-lg font-semibold text-gray-900 mb-4">Mensagens globais</div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">WhatsApp</label>
+            <textarea v-model="settingsForm.whatsapp_template" rows="4" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="Use [Nome] para inserir o nome do cliente."></textarea>
+            <div v-if="settingsForm.errors.whatsapp_template" class="text-sm text-red-600 mt-1">{{ settingsForm.errors.whatsapp_template }}</div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">E-mail (assunto)</label>
+            <input v-model="settingsForm.email_subject_template" type="text" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="Use [Nome] para inserir o nome do cliente." />
+            <div v-if="settingsForm.errors.email_subject_template" class="text-sm text-red-600 mt-1">{{ settingsForm.errors.email_subject_template }}</div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">E-mail (mensagem)</label>
+            <textarea v-model="settingsForm.email_body_template" rows="5" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="Use [Nome] para inserir o nome do cliente."></textarea>
+            <div v-if="settingsForm.errors.email_body_template" class="text-sm text-red-600 mt-1">{{ settingsForm.errors.email_body_template }}</div>
+          </div>
+
+          <div class="flex items-center justify-end gap-3">
+            <button type="button" class="text-gray-700 hover:text-gray-900 font-semibold" @click="resetSettingsDraft">
+              Descartar
+            </button>
+            <button
+              type="button"
+              class="bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed"
+              :disabled="settingsForm.processing"
+              @click="saveSettings"
+            >
+              Salvar configurações
+            </button>
           </div>
         </div>
       </div>
@@ -240,8 +277,8 @@
 
 <script setup>
 import AdminLayout from '@/Shared/AdminLayout.vue';
-import { computed, reactive, ref, watch } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
+import { router, useForm, usePage } from '@inertiajs/vue3';
 
 const props = defineProps({
   leads: {
@@ -250,13 +287,37 @@ const props = defineProps({
   },
 });
 
-const statuses = [
+const defaultStatuses = [
   'Novo Lead',
   'Contato Feito',
   'Visita agendada',
   'Venda concluída',
   'Realizar novo contato',
 ];
+
+const page = usePage();
+const sharedSettings = computed(() => page.props?.settings || {});
+
+function parseKanbanColumns() {
+  const raw = sharedSettings.value?.leads_kanban_columns;
+  if (Array.isArray(raw)) {
+    const list = raw.map((v) => String(v || '').trim()).filter(Boolean);
+    return list.length ? list : [...defaultStatuses];
+  }
+  if (typeof raw === 'string' && raw.trim() !== '') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const list = parsed.map((v) => String(v || '').trim()).filter(Boolean);
+        return list.length ? list : [...defaultStatuses];
+      }
+    } catch {
+    }
+  }
+  return [...defaultStatuses];
+}
+
+const statuses = ref(parseKanbanColumns());
 
 const activeCategoria = ref('leads');
 const draggingLeadId = ref(null);
@@ -294,9 +355,9 @@ const filteredLeads = computed(() => {
 });
 
 const leadsByStatus = computed(() => {
-  const map = Object.fromEntries(statuses.map((s) => [s, []]));
+  const map = Object.fromEntries(statuses.value.map((s) => [s, []]));
   for (const lead of filteredLeads.value) {
-    const status = statuses.includes(lead.status) ? lead.status : 'Novo Lead';
+    const status = statuses.value.includes(lead.status) ? lead.status : (statuses.value[0] || 'Novo Lead');
     map[status].push(lead);
   }
   return map;
@@ -305,33 +366,39 @@ const leadsByStatus = computed(() => {
 const selectedLeadId = ref(null);
 const selectedLead = computed(() => localLeads.value.find((l) => l.id === selectedLeadId.value) || null);
 
-const editStatus = ref('Novo Lead');
+const editStatus = ref(statuses.value[0] || 'Novo Lead');
 const editProximoContato = ref('');
 
-const whatsDraftById = reactive({});
-const emailSubjectById = reactive({});
-const emailBodyById = reactive({});
-
 const defaultWhatsAppTemplate = 'Olá [Nome], tudo bem?';
-const defaultEmailSubject = 'Contato - [Nome]';
-const defaultEmailBody = 'Olá [Nome],\n\nTudo bem?\n\n';
+const defaultEmailSubjectTemplate = 'Contato - [Nome]';
+const defaultEmailBodyTemplate = 'Olá [Nome],\n\nTudo bem?\n\n';
 
-function ensureDraftsForLead(lead) {
-  if (!Object.prototype.hasOwnProperty.call(whatsDraftById, lead.id)) {
-    whatsDraftById[lead.id] = defaultWhatsAppTemplate;
-  }
-  if (!Object.prototype.hasOwnProperty.call(emailSubjectById, lead.id)) {
-    emailSubjectById[lead.id] = defaultEmailSubject;
-  }
-  if (!Object.prototype.hasOwnProperty.call(emailBodyById, lead.id)) {
-    emailBodyById[lead.id] = defaultEmailBody;
-  }
+function makeId() {
+  return Math.random().toString(36).slice(2, 10);
 }
+
+const columnsDraft = ref(statuses.value.map((name) => ({ id: makeId(), name })));
+
+const settingsForm = useForm({
+  kanban_columns: statuses.value,
+  whatsapp_template: sharedSettings.value?.leads_whatsapp_template || defaultWhatsAppTemplate,
+  email_subject_template: sharedSettings.value?.leads_email_subject_template || defaultEmailSubjectTemplate,
+  email_body_template: sharedSettings.value?.leads_email_body_template || defaultEmailBodyTemplate,
+});
+
+watch(sharedSettings, () => {
+  const cols = parseKanbanColumns();
+  statuses.value = cols;
+  columnsDraft.value = cols.map((name) => ({ id: makeId(), name }));
+  settingsForm.kanban_columns = cols;
+  settingsForm.whatsapp_template = sharedSettings.value?.leads_whatsapp_template || defaultWhatsAppTemplate;
+  settingsForm.email_subject_template = sharedSettings.value?.leads_email_subject_template || defaultEmailSubjectTemplate;
+  settingsForm.email_body_template = sharedSettings.value?.leads_email_body_template || defaultEmailBodyTemplate;
+});
 
 function openLead(id) {
   selectedLeadId.value = id;
   if (!selectedLead.value) return;
-  ensureDraftsForLead(selectedLead.value);
   resetEdits();
 }
 
@@ -341,7 +408,7 @@ function closeLead() {
 
 function resetEdits() {
   if (!selectedLead.value) return;
-  editStatus.value = selectedLead.value.status || 'Novo Lead';
+  editStatus.value = selectedLead.value.status || (statuses.value[0] || 'Novo Lead');
   editProximoContato.value = toDatetimeLocal(selectedLead.value.proximo_contato_em);
 }
 
@@ -450,19 +517,67 @@ function normalizePhone(raw) {
 function openWhatsApp(lead) {
   const phone = normalizePhone(lead.telefone);
   if (!phone) return;
-  ensureDraftsForLead(lead);
-  const msg = replaceNome(whatsDraftById[lead.id], lead);
+  const msg = replaceNome(settingsForm.whatsapp_template, lead);
   const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 function openEmail(lead) {
   if (!lead.email) return;
-  ensureDraftsForLead(lead);
-  const subject = replaceNome(emailSubjectById[lead.id], lead);
-  const body = replaceNome(emailBodyById[lead.id], lead);
+  const subject = replaceNome(settingsForm.email_subject_template, lead);
+  const body = replaceNome(settingsForm.email_body_template, lead);
   const url = `mailto:${encodeURIComponent(lead.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.location.href = url;
+}
+
+function addColumn() {
+  columnsDraft.value.push({ id: makeId(), name: '' });
+}
+
+function removeColumn(id) {
+  columnsDraft.value = columnsDraft.value.filter((c) => c.id !== id);
+}
+
+function sanitizeColumns() {
+  const list = columnsDraft.value
+    .map((c) => String(c.name || '').trim())
+    .filter(Boolean);
+
+  const uniq = [];
+  const seen = new Set();
+  for (const item of list) {
+    const key = item.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uniq.push(item);
+  }
+
+  return uniq.length ? uniq : [...defaultStatuses];
+}
+
+function resetSettingsDraft() {
+  const cols = parseKanbanColumns();
+  statuses.value = cols;
+  columnsDraft.value = cols.map((name) => ({ id: makeId(), name }));
+  settingsForm.kanban_columns = cols;
+  settingsForm.whatsapp_template = sharedSettings.value?.leads_whatsapp_template || defaultWhatsAppTemplate;
+  settingsForm.email_subject_template = sharedSettings.value?.leads_email_subject_template || defaultEmailSubjectTemplate;
+  settingsForm.email_body_template = sharedSettings.value?.leads_email_body_template || defaultEmailBodyTemplate;
+  settingsForm.clearErrors();
+}
+
+function saveSettings() {
+  const cols = sanitizeColumns();
+  settingsForm.kanban_columns = cols;
+
+  settingsForm.put('/admin/leads/settings', {
+    preserveScroll: true,
+    onSuccess: () => {
+      statuses.value = cols;
+      columnsDraft.value = cols.map((name) => ({ id: makeId(), name }));
+      settingsForm.clearErrors();
+    },
+  });
 }
 
 function formatDate(value) {
