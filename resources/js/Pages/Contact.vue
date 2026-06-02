@@ -76,7 +76,7 @@
                 <label class="block text-gray-700 font-medium mb-2">Nome</label>
                 <input 
                   type="text" 
-                  v-model="form.name" 
+                  v-model="form.nome" 
                   placeholder="Seu nome completo" 
                   class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
@@ -86,7 +86,7 @@
                 <label class="block text-gray-700 font-medium mb-2">Telefone</label>
                 <input 
                   type="tel" 
-                  v-model="form.phone" 
+                  v-model="form.telefone" 
                   placeholder="(11) 99999-9999" 
                   class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
@@ -105,7 +105,7 @@
               <div>
                 <label class="block text-gray-700 font-medium mb-2">Mensagem</label>
                 <textarea 
-                  v-model="form.message" 
+                  v-model="form.mensagem" 
                   rows="5" 
                   placeholder="Sua mensagem..." 
                   class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -114,7 +114,8 @@
               </div>
               <button 
                 type="submit" 
-                class="w-full site-button font-semibold py-3 px-6 rounded-lg transition"
+                class="w-full site-button font-semibold py-3 px-6 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed"
+                :disabled="form.processing"
               >
                 Enviar Mensagem
               </button>
@@ -127,7 +128,8 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
+import { useForm } from '@inertiajs/vue3';
 import Layout from '@/Shared/Layout.vue';
 
 const props = defineProps({
@@ -165,20 +167,22 @@ const bannerOverlayOpacity = computed(() => {
   return Math.max(0, Math.min(100, raw)) / 100;
 });
 
-const form = ref({
-  name: '',
-  phone: '',
+const form = useForm({
+  nome: '',
+  telefone: '',
   email: '',
-  message: '',
+  mensagem: '',
+  origem: 'Site - Contato',
 });
 
 function submitForm() {
-  alert('Mensagem enviada com sucesso! Entraremos em contato em breve.');
-  form.value = {
-    name: '',
-    phone: '',
-    email: '',
-    message: '',
-  };
+  form.post('/contato/send', {
+    preserveScroll: true,
+    onSuccess: () => {
+      alert('Mensagem enviada com sucesso! Entraremos em contato em breve.');
+      form.reset('nome', 'telefone', 'email', 'mensagem');
+      form.clearErrors();
+    },
+  });
 }
 </script>

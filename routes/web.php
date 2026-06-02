@@ -51,6 +51,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::put('/categories/special/{specialCategory}', [AdminController::class, 'updateSpecialCategory'])->name('special-categories.update');
     Route::delete('/categories/special/{specialCategory}', [AdminController::class, 'destroySpecialCategory'])->name('special-categories.destroy');
     Route::get('/leads', [AdminController::class, 'leads'])->name('leads');
+    Route::patch('/leads/{lead}', [AdminController::class, 'updateLead'])->name('leads.update');
     Route::get('/appearance', [AdminController::class, 'appearance'])->name('appearance');
     Route::post('/appearance', [AdminController::class, 'updateAppearance']);
     Route::put('/appearance', [AdminController::class, 'updateAppearance'])->name('appearance.update');
@@ -84,6 +85,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
 // Form submissions
 Route::post('/contato/send', [ContactController::class, 'send'])->name('contact.send');
+Route::post('/venda-seu-imovel/send', [HomeController::class, 'sendSell'])->name('sell.send');
 Route::post('/avalie-seu-imovel/send', [PageController::class, 'sendEvaluate'])->name('evaluate.send');
 Route::post('/corretor-parceiro/send', [PageController::class, 'sendPartnerAgent'])->name('partner-agent.send');
 Route::post('/off-market/send', [PageController::class, 'sendOffMarket'])->name('off-market.send');

@@ -14,7 +14,17 @@ class Lead extends Model
         'email',
         'mensagem',
         'origem',
+        'categoria',
+        'status',
+        'proximo_contato_em',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'proximo_contato_em' => 'datetime',
+        ];
+    }
 
     public function property(): BelongsTo
     {

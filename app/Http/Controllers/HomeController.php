@@ -11,8 +11,10 @@ use App\Models\PropertyType;
 use App\Models\SpecialCategory;
 use App\Models\Setting;
 use App\Models\Page;
+use App\Models\Lead;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Redirect;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class HomeController extends Controller
@@ -472,6 +474,40 @@ class HomeController extends Controller
         return Inertia::render('Sell');
     }
 
+    public function sendSell(Request $request)
+    {
+        $validated = $request->validate([
+            'nome' => ['required', 'string', 'max:255'],
+            'telefone' => ['required', 'string', 'max:50'],
+            'email' => ['nullable', 'string', 'max:255'],
+            'tipo_imovel' => ['nullable', 'string', 'max:255'],
+            'quartos' => ['nullable', 'string', 'max:255'],
+            'banheiros' => ['nullable', 'string', 'max:255'],
+            'area' => ['nullable', 'string', 'max:255'],
+            'mensagem' => ['nullable', 'string'],
+        ]);
+
+        $parts = [];
+        if (!empty($validated['tipo_imovel'])) $parts[] = 'Tipo: ' . $validated['tipo_imovel'];
+        if (!empty($validated['quartos'])) $parts[] = 'Quartos: ' . $validated['quartos'];
+        if (!empty($validated['banheiros'])) $parts[] = 'Banheiros: ' . $validated['banheiros'];
+        if (!empty($validated['area'])) $parts[] = 'Área: ' . $validated['area'];
+        if (!empty($validated['mensagem'])) $parts[] = 'Mensagem: ' . $validated['mensagem'];
+        $mensagem = count($parts) ? implode("\n", $parts) : null;
+
+        Lead::create([
+            'nome' => $validated['nome'],
+            'telefone' => $validated['telefone'],
+            'email' => $validated['email'] ?? '',
+            'mensagem' => $mensagem,
+            'origem' => 'Site - Venda seu Imóvel',
+            'categoria' => 'venda-seu-imovel',
+            'status' => 'Novo Lead',
+        ]);
+
+        return Redirect::back();
+    }
+
     public function showProperty(string $slug): Response
     {
         $propertyModel = Property::with(['propertyType', 'businessType', 'photos'])
@@ -486,6 +522,7 @@ class HomeController extends Controller
             ->all();
 
         $property = [
+            'id' => $propertyModel->id,
             'slug' => $propertyModel->slug,
             'title' => $propertyModel->titulo,
             'address' => trim($propertyModel->endereco . ' - ' . $propertyModel->bairro . ', ' . $propertyModel->cidade . '/' . $propertyModel->estado),

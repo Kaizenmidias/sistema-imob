@@ -411,8 +411,36 @@ class AdminController extends Controller
     
     public function leads(): Response
     {
-        $leads = Lead::all();
-        return Inertia::render('Admin/Leads', ['leads' => $leads]);
+        $leads = Lead::query()
+            ->with(['property'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        return Inertia::render('Admin/Leads', [
+            'leads' => $leads,
+        ]);
+    }
+
+    public function updateLead(Request $request, Lead $lead)
+    {
+        $validated = $request->validate([
+            'status' => ['nullable', 'string', 'max:60'],
+            'proximo_contato_em' => ['nullable', 'date'],
+        ]);
+
+        $payload = [];
+        if (array_key_exists('status', $validated) && $validated['status'] !== null) {
+            $payload['status'] = $validated['status'];
+        }
+        if (array_key_exists('proximo_contato_em', $validated)) {
+            $payload['proximo_contato_em'] = $validated['proximo_contato_em'];
+        }
+
+        if (count($payload)) {
+            $lead->update($payload);
+        }
+
+        return Redirect::back();
     }
     
     public function appearance(): Response

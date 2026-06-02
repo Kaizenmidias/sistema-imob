@@ -21,11 +21,11 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label class="block text-gray-700 font-medium mb-2">Nome Completo</label>
-                <input type="text" v-model="form.name" placeholder="Seu nome" class="w-full border border-gray-300 rounded-lg px-4 py-3" required />
+                <input type="text" v-model="form.nome" placeholder="Seu nome" class="w-full border border-gray-300 rounded-lg px-4 py-3" required />
               </div>
               <div>
                 <label class="block text-gray-700 font-medium mb-2">Telefone</label>
-                <input type="tel" v-model="form.phone" placeholder="(11) 99999-9999" class="w-full border border-gray-300 rounded-lg px-4 py-3" required />
+                <input type="tel" v-model="form.telefone" placeholder="(11) 99999-9999" class="w-full border border-gray-300 rounded-lg px-4 py-3" required />
               </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -35,7 +35,7 @@
               </div>
               <div>
                 <label class="block text-gray-700 font-medium mb-2">Tipo do Imóvel</label>
-                <select v-model="form.propertyType" class="w-full border border-gray-300 rounded-lg px-4 py-3" required>
+                <select v-model="form.tipo_imovel" class="w-full border border-gray-300 rounded-lg px-4 py-3" required>
                   <option value="">Selecione</option>
                   <option value="casa">Casa</option>
                   <option value="apartamento">Apartamento</option>
@@ -45,11 +45,11 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label class="block text-gray-700 font-medium mb-2">Quartos</label>
-                <input type="number" v-model="form.bedrooms" placeholder="3" class="w-full border border-gray-300 rounded-lg px-4 py-3" />
+                <input type="number" v-model="form.quartos" placeholder="3" class="w-full border border-gray-300 rounded-lg px-4 py-3" />
               </div>
               <div>
                 <label class="block text-gray-700 font-medium mb-2">Banheiros</label>
-                <input type="number" v-model="form.bathrooms" placeholder="2" class="w-full border border-gray-300 rounded-lg px-4 py-3" />
+                <input type="number" v-model="form.banheiros" placeholder="2" class="w-full border border-gray-300 rounded-lg px-4 py-3" />
               </div>
               <div>
                 <label class="block text-gray-700 font-medium mb-2">Área (m²)</label>
@@ -58,9 +58,9 @@
             </div>
             <div>
               <label class="block text-gray-700 font-medium mb-2">Mensagem</label>
-              <textarea v-model="form.message" rows="4" placeholder="Descreva seu imóvel..." class="w-full border border-gray-300 rounded-lg px-4 py-3"></textarea>
+              <textarea v-model="form.mensagem" rows="4" placeholder="Descreva seu imóvel..." class="w-full border border-gray-300 rounded-lg px-4 py-3"></textarea>
             </div>
-            <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg transition">
+            <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed" :disabled="form.processing">
               Enviar
             </button>
           </form>
@@ -71,7 +71,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { useForm } from '@inertiajs/vue3';
 import Layout from '@/Shared/Layout.vue';
 
 const placeholderImage = `data:image/svg+xml,${encodeURIComponent(
@@ -87,28 +87,25 @@ const placeholderImage = `data:image/svg+xml,${encodeURIComponent(
   </svg>`
 )}`;
 
-const form = ref({
-  name: '',
-  phone: '',
+const form = useForm({
+  nome: '',
+  telefone: '',
   email: '',
-  propertyType: '',
-  bedrooms: '',
-  bathrooms: '',
+  tipo_imovel: '',
+  quartos: '',
+  banheiros: '',
   area: '',
-  message: '',
+  mensagem: '',
 });
 
 function submitForm() {
-  alert('Dados enviados! Entraremos em contato em breve.');
-  form.value = {
-    name: '',
-    phone: '',
-    email: '',
-    propertyType: '',
-    bedrooms: '',
-    bathrooms: '',
-    area: '',
-    message: '',
-  };
+  form.post('/venda-seu-imovel/send', {
+    preserveScroll: true,
+    onSuccess: () => {
+      alert('Dados enviados! Entraremos em contato em breve.');
+      form.reset();
+      form.clearErrors();
+    },
+  });
 }
 </script>

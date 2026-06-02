@@ -2,13 +2,19 @@
   <AdminLayout>
     <template #pageTitle>Tipos de Negócio</template>
 
-    <div class="bg-white rounded-xl shadow p-6 border border-gray-200 mb-8">
+    <div class="flex items-center justify-end mb-4">
+      <button type="button" class="bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg font-semibold transition" @click="toggleCreate">
+        Novo tipo de negócio
+      </button>
+    </div>
+
+    <div v-if="showCreate" class="bg-white rounded-xl shadow p-6 border border-gray-200 mb-8">
       <h3 class="text-lg font-semibold text-gray-800 mb-4">Adicionar</h3>
 
       <form @submit.prevent="create" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
         <div>
           <label class="block text-gray-700 mb-2 text-sm font-medium">Nome</label>
-          <input v-model="createForm.name" type="text" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="Comprar, Alugar...">
+          <input ref="createNameRef" v-model="createForm.name" type="text" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="Comprar, Alugar...">
           <div v-if="createForm.errors.name" class="text-sm text-red-600 mt-1">{{ createForm.errors.name }}</div>
         </div>
 
@@ -23,6 +29,9 @@
             <input v-model="createForm.is_active" type="checkbox" class="rounded border-gray-300">
             Ativo
           </label>
+          <button type="button" class="text-gray-700 hover:text-gray-900 font-semibold" @click="cancelCreate">
+            Cancelar
+          </button>
           <button type="submit" :disabled="createForm.processing" class="bg-blue-900 hover:bg-blue-800 disabled:opacity-60 text-white px-6 py-3 rounded-lg font-semibold transition">
             Salvar
           </button>
@@ -98,7 +107,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
 
@@ -115,9 +124,30 @@ const createForm = useForm({
   is_active: true,
 });
 
+const showCreate = ref(false);
+const createNameRef = ref(null);
+
+const toggleCreate = async () => {
+  showCreate.value = !showCreate.value;
+  if (showCreate.value) {
+    await nextTick();
+    createNameRef.value?.focus?.();
+  }
+};
+
+const cancelCreate = () => {
+  createForm.reset();
+  createForm.clearErrors();
+  showCreate.value = false;
+};
+
 const create = () => {
   createForm.post('/admin/business-types', {
-    onSuccess: () => createForm.reset('name'),
+    onSuccess: () => {
+      createForm.reset();
+      createForm.clearErrors();
+      showCreate.value = false;
+    },
   });
 };
 
@@ -156,4 +186,3 @@ const remove = (id) => {
   router.delete(`/admin/business-types/${id}`);
 };
 </script>
-

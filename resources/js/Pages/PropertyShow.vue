@@ -130,7 +130,7 @@
               <form @submit.prevent="submitContact" class="space-y-4">
                 <div>
                   <input
-                    v-model="contactForm.name"
+                    v-model="contactForm.nome"
                     type="text"
                     placeholder="Seu nome *"
                     class="w-full px-4 py-3 bg-gray-100 rounded-full border-0 focus:ring-2 focus:ring-blue-500"
@@ -140,7 +140,7 @@
                 <div class="flex items-center gap-3">
                   <div class="px-4 py-3 bg-gray-100 rounded-full text-gray-600">BR</div>
                   <input
-                    v-model="contactForm.phone"
+                    v-model="contactForm.telefone"
                     type="tel"
                     placeholder="(00) 00000-0000"
                     class="flex-1 px-4 py-3 bg-gray-100 rounded-full border-0 focus:ring-2 focus:ring-blue-500"
@@ -157,7 +157,7 @@
                 </div>
                 <div>
                   <textarea
-                    v-model="contactForm.message"
+                    v-model="contactForm.mensagem"
                     placeholder="Olá, estou interessado nesse imóvel que encontrei no site."
                     rows="4"
                     class="w-full px-4 py-3 bg-gray-100 rounded-3xl border-0 focus:ring-2 focus:ring-blue-500 resize-none"
@@ -165,7 +165,8 @@
                 </div>
                 <button
                   type="submit"
-                  class="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-4 px-6 rounded-full transition"
+                  class="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-4 px-6 rounded-full transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  :disabled="contactForm.processing"
                 >
                   Enviar mensagem
                 </button>
@@ -219,6 +220,7 @@
 
 <script setup>
 import { computed, ref } from 'vue';
+import { useForm } from '@inertiajs/vue3';
 import Layout from '@/Shared/Layout.vue';
 
 const props = defineProps({
@@ -252,11 +254,13 @@ const photos = computed(() => {
   return [placeholderImage];
 });
 
-const contactForm = ref({
-  name: '',
-  phone: '',
+const contactForm = useForm({
+  property_id: props.property?.id ?? null,
+  nome: '',
+  telefone: '',
   email: '',
-  message: 'Olá, estou interessado nesse imóvel que encontrei no site.',
+  mensagem: 'Olá, estou interessado nesse imóvel que encontrei no site.',
+  origem: 'Site - Interesse no Imóvel',
 });
 
 function formatPrice(value) {
@@ -265,12 +269,14 @@ function formatPrice(value) {
 }
 
 function submitContact() {
-  alert('Mensagem enviada com sucesso! Entraremos em contato em breve.');
-  contactForm.value = {
-    name: '',
-    phone: '',
-    email: '',
-    message: 'Olá, estou interessado nesse imóvel que encontrei no site.',
-  };
+  contactForm.post('/contato/send', {
+    preserveScroll: true,
+    onSuccess: () => {
+      alert('Mensagem enviada com sucesso! Entraremos em contato em breve.');
+      contactForm.reset('nome', 'telefone', 'email');
+      contactForm.mensagem = 'Olá, estou interessado nesse imóvel que encontrei no site.';
+      contactForm.clearErrors();
+    },
+  });
 }
 </script>
