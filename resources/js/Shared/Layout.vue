@@ -6,8 +6,8 @@
     </main>
     <Footer />
 
-    <div v-if="showCookieBanner" class="fixed bottom-6 left-0 right-0 z-50 px-4">
-      <div class="max-w-3xl mx-auto bg-white border border-gray-200 shadow-2xl rounded-2xl p-5">
+    <div v-if="showCookieBanner" class="fixed bottom-6 right-6 z-50 w-[420px] max-w-[calc(100vw-3rem)]">
+      <div class="bg-white border border-gray-200 shadow-2xl rounded-2xl p-5">
         <div class="flex items-start gap-4">
           <div class="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center" style="background: color-mix(in oklab, var(--site-primary) 12%, transparent)">
             <svg class="w-6 h-6" style="color: var(--site-primary)" fill="currentColor" viewBox="0 0 24 24">
