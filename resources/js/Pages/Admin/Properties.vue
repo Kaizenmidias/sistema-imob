@@ -14,6 +14,26 @@
       </div>
     </div>
 
+    <div class="bg-white rounded-xl shadow border border-gray-200 p-4 mb-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Categoria (Tipo do imóvel)</label>
+          <select v-model="filters.property_type_id" class="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white" @change="applyFilters">
+            <option value="">Todas</option>
+            <option v-for="t in propertyTypes" :key="t.id" :value="String(t.id)">
+              {{ t.nome_subtipo ? `${t.nome_tipo} - ${t.nome_subtipo}` : t.nome_tipo }}
+            </option>
+          </select>
+        </div>
+
+        <div class="sm:col-span-1 lg:col-span-3 flex items-center justify-end gap-3">
+          <button type="button" class="text-gray-700 hover:text-gray-900 font-semibold" @click="clearFilters">
+            Limpar filtros
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
       <table class="w-full">
         <thead class="bg-gray-50 border-b border-gray-200">
@@ -56,6 +76,7 @@
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <Link :href="`/admin/properties/${property.id}/edit`" class="text-blue-600 hover:text-blue-800 font-medium">Editar</Link>
+                <button type="button" class="text-gray-700 hover:text-gray-900 font-medium" @click="duplicate(property.id)">Duplicar</button>
                 <button type="button" class="text-red-600 hover:text-red-800 font-medium" @click="remove(property.id)">Excluir</button>
               </div>
             </td>
@@ -72,6 +93,7 @@
 </template>
 
 <script setup>
+import { computed, reactive } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
 
@@ -80,6 +102,20 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  propertyTypes: {
+    type: Array,
+    default: () => [],
+  },
+  selectedPropertyTypeId: {
+    type: [Number, String, null],
+    default: null,
+  },
+});
+
+const propertyTypes = computed(() => props.propertyTypes || []);
+
+const filters = reactive({
+  property_type_id: props.selectedPropertyTypeId ? String(props.selectedPropertyTypeId) : '',
 });
 
 const formatPrice = (value) => {
@@ -94,5 +130,18 @@ const operationBadgeClass = (operation) => {
 
 const remove = (id) => {
   router.delete(`/admin/properties/${id}`);
+};
+
+const duplicate = (id) => {
+  router.post(`/admin/properties/${id}/duplicate`, {}, { preserveScroll: true });
+};
+
+const applyFilters = () => {
+  router.get('/admin/properties', { property_type_id: filters.property_type_id || undefined }, { preserveState: true, replace: true });
+};
+
+const clearFilters = () => {
+  filters.property_type_id = '';
+  applyFilters();
 };
 </script>

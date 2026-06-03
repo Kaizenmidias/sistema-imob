@@ -133,10 +133,23 @@ class AdminController extends Controller
         ]);
     }
     
-    public function properties(): Response
+    public function properties(Request $request): Response
     {
-        $properties = Property::with(['propertyType', 'businessType', 'photos'])->get();
-        return Inertia::render('Admin/Properties', ['properties' => $properties]);
+        $propertyTypes = PropertyType::orderBy('nome_tipo')->orderBy('nome_subtipo')->get(['id', 'nome_tipo', 'nome_subtipo']);
+        $selectedPropertyTypeId = $request->query('property_type_id');
+        $selectedPropertyTypeId = is_null($selectedPropertyTypeId) ? null : (int) $selectedPropertyTypeId;
+
+        $properties = Property::query()
+            ->with(['propertyType', 'businessType', 'photos'])
+            ->when($selectedPropertyTypeId, fn ($q) => $q->where('tipo_propriedade_id', $selectedPropertyTypeId))
+            ->orderByDesc('created_at')
+            ->get();
+
+        return Inertia::render('Admin/Properties', [
+            'properties' => $properties,
+            'propertyTypes' => $propertyTypes,
+            'selectedPropertyTypeId' => $selectedPropertyTypeId,
+        ]);
     }
     
     public function createProperty(): Response
@@ -393,6 +406,46 @@ class AdminController extends Controller
         $property->delete();
 
         return Redirect::route('admin.properties');
+    }
+
+    public function duplicateProperty(Property $property)
+    {
+        $property->load(['photos', 'specialCategories', 'features']);
+
+        $newTitle = trim($property->titulo . ' (Cópia)');
+        $new = $property->replicate();
+        $new->titulo = $newTitle;
+        $new->slug = $this->generateUniquePropertySlug($newTitle);
+        $new->codigo_referencia = $this->generateUniqueCodigoReferencia();
+        $new->codigo_anuncio = $this->generateUniqueCodigoAnuncio();
+        $new->ativo = false;
+        $new->save();
+
+        $new->specialCategories()->sync($property->specialCategories->pluck('id')->values()->all());
+        $new->features()->sync($property->features->pluck('id')->values()->all());
+
+        foreach ($property->photos as $photo) {
+            $source = $photo->arquivo;
+            $dest = null;
+
+            if (!empty($source) && Storage::disk('public')->exists($source)) {
+                $ext = pathinfo($source, PATHINFO_EXTENSION);
+                $filename = Str::random(20) . ($ext ? ('.' . $ext) : '');
+                $dest = "properties/{$new->id}/{$filename}";
+                Storage::disk('public')->copy($source, $dest);
+            }
+
+            $path = $dest ?: $source;
+            PropertyPhoto::create([
+                'property_id' => $new->id,
+                'arquivo' => $path,
+                'url' => url('/storage/' . $path),
+                'principal' => (bool) $photo->principal,
+                'ordem' => (int) $photo->ordem,
+            ]);
+        }
+
+        return Redirect::route('admin.properties.edit', ['property' => $new->id]);
     }
 
     private function parseBrlCurrency(string $input): float
