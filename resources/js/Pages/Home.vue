@@ -2,7 +2,7 @@
   <Layout>
     <!-- Hero Section -->
     <section
-      class="relative text-white min-h-[calc(100vh-5rem)] min-h-[calc(100svh-5rem)] flex items-center"
+      class="relative text-white min-h-[100vh] min-h-[100svh] flex items-center"
       :style="{ background: 'linear-gradient(to right, var(--site-primary), var(--site-secondary))' }"
     >
       <div class="absolute inset-0">
