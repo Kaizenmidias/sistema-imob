@@ -46,6 +46,9 @@ class HandleInertiaRequests extends Middleware
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'role' => $user->role,
+                    'admin_enabled' => (bool) $user->admin_enabled,
+                    'permissions' => $user->permissions,
                     'profile_photo_url' => !empty($user->profile_photo_path) ? url('/storage/' . ltrim($user->profile_photo_path, '/')) : null,
                 ] : null,
             ],
@@ -54,6 +57,18 @@ class HandleInertiaRequests extends Middleware
                 ->orderBy('order')
                 ->get(['id', 'label', 'icon', 'url', 'order', 'is_active']),
             'settings' => fn () => Setting::query()->pluck('valor', 'chave'),
+            'paths' => fn () => (function () {
+                $settings = Setting::query()->pluck('valor', 'chave');
+                $admin = trim((string) ($settings['admin_path'] ?? 'admin'), '/');
+                $login = trim((string) ($settings['login_path'] ?? 'login'), '/');
+                $admin = $admin !== '' ? $admin : 'admin';
+                $login = $login !== '' ? $login : 'login';
+
+                return [
+                    'admin' => '/' . $admin,
+                    'login' => '/' . $login,
+                ];
+            })(),
         ];
     }
 }
