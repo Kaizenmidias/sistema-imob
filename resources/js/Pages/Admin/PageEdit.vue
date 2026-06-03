@@ -3,7 +3,7 @@
     <template #pageTitle>Editar Página: {{ page?.titulo || 'Página' }}</template>
     
     <div class="flex items-center justify-between mb-6">
-      <Link href="/admin/pages" class="text-blue-700 hover:text-blue-900 font-semibold">Voltar</Link>
+      <Link :href="`${adminBase}/pages`" class="text-blue-700 hover:text-blue-900 font-semibold">Voltar</Link>
       <div class="flex items-center gap-3">
         <button type="button" class="text-gray-700 hover:text-gray-900 font-semibold" @click="duplicate">Duplicar</button>
         <button type="button" class="text-red-600 hover:text-red-800 font-semibold" @click="remove">Excluir</button>
@@ -350,8 +350,11 @@
 
 <script setup>
 import { computed, ref, watchEffect } from 'vue';
-import { Link, router, useForm } from '@inertiajs/vue3';
+import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
+
+const pageCtx = usePage();
+const adminBase = computed(() => pageCtx.props?.paths?.admin || '/admin');
 
 const props = defineProps({
   page: {
@@ -544,7 +547,7 @@ const onContentMediaSelected = async (e) => {
   body.append('file', file);
 
   try {
-    const response = await window.axios.post(`/admin/pages/${props.page.id}/media`, body, {
+    const response = await window.axios.post(`${adminBase.value}/pages/${props.page.id}/media`, body, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     const url = response?.data?.url;
@@ -575,7 +578,7 @@ const territoryWidePreview = ref(form.page_data?.territory?.images?.wide || '');
 const uploadMedia = async (file) => {
   const body = new FormData();
   body.append('file', file);
-  const response = await window.axios.post(`/admin/pages/${props.page.id}/media`, body, {
+  const response = await window.axios.post(`${adminBase.value}/pages/${props.page.id}/media`, body, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return response?.data?.url || '';
@@ -709,14 +712,14 @@ const save = () => {
       page_data: undefined,
       _method: 'put',
     }))
-    .post(`/admin/pages/${props.page.id}`, { forceFormData: true });
+    .post(`${adminBase.value}/pages/${props.page.id}`, { forceFormData: true });
 };
 
 const duplicate = () => {
-  router.post(`/admin/pages/${props.page.id}/duplicate`);
+  router.post(`${adminBase.value}/pages/${props.page.id}/duplicate`);
 };
 
 const remove = () => {
-  router.delete(`/admin/pages/${props.page.id}`);
+  router.delete(`${adminBase.value}/pages/${props.page.id}`);
 };
 </script>

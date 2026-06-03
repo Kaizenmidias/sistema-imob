@@ -88,6 +88,7 @@ import { computed } from 'vue';
 const page = usePage();
 const settings = computed(() => page.props.settings || {});
 const logoUrl = computed(() => settings.value.logo_url || '');
+const loginPath = computed(() => page.props?.paths?.login || '/login');
 
 const form = useForm({
   email: '',
@@ -96,7 +97,7 @@ const form = useForm({
 });
 
 const submit = () => {
-  form.post('/login', {
+  form.post(loginPath.value, {
     onFinish: () => form.reset('password'),
   });
 };

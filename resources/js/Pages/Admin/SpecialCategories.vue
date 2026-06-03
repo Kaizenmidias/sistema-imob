@@ -119,9 +119,12 @@
 </template>
 
 <script setup>
-import { nextTick, ref } from 'vue';
-import { router, useForm } from '@inertiajs/vue3';
+import { computed, nextTick, ref } from 'vue';
+import { router, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
+
+const page = usePage();
+const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 
 defineProps({
   items: {
@@ -155,7 +158,7 @@ const cancelCreate = () => {
 };
 
 const create = () => {
-  createForm.post('/admin/categories/special', {
+  createForm.post(`${adminBase.value}/categories/special`, {
     onSuccess: () => {
       createForm.reset();
       createForm.clearErrors();
@@ -192,12 +195,12 @@ const cancelEdit = () => {
 
 const saveEdit = () => {
   if (!editingId.value) return;
-  editForm.put(`/admin/categories/special/${editingId.value}`, {
+  editForm.put(`${adminBase.value}/categories/special/${editingId.value}`, {
     onSuccess: () => cancelEdit(),
   });
 };
 
 const remove = (id) => {
-  router.delete(`/admin/categories/special/${id}`);
+  router.delete(`${adminBase.value}/categories/special/${id}`);
 };
 </script>

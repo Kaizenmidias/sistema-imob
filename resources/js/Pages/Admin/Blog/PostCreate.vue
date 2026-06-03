@@ -3,7 +3,7 @@
     <template #pageTitle>Nova Postagem</template>
 
     <div class="mb-6">
-      <Link href="/admin/blog/posts" class="text-blue-700 hover:text-blue-900 font-semibold">Voltar</Link>
+      <Link :href="`${adminBase}/blog/posts`" class="text-blue-700 hover:text-blue-900 font-semibold">Voltar</Link>
     </div>
 
     <form @submit.prevent="submit" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -80,8 +80,11 @@
 
 <script setup>
 import { computed, ref } from 'vue';
-import { Link, useForm } from '@inertiajs/vue3';
+import { Link, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
+
+const page = usePage();
+const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 
 const props = defineProps({
   categories: {
@@ -124,6 +127,6 @@ const onFeaturedSelected = (e) => {
 
 const submit = () => {
   form.featured_image = featuredFile.value;
-  form.post('/admin/blog/posts', { forceFormData: true });
+  form.post(`${adminBase.value}/blog/posts`, { forceFormData: true });
 };
 </script>

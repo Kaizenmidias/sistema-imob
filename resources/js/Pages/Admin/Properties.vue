@@ -7,14 +7,14 @@
       <div class="flex items-center gap-3">
         <Link
           v-if="!isTrash"
-          href="/admin/properties/trash"
+          :href="`${adminBase}/properties/trash`"
           class="bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 px-6 py-2 rounded-lg font-semibold transition"
         >
           Lixeira
         </Link>
         <Link
           v-else
-          href="/admin/properties"
+          :href="`${adminBase}/properties`"
           class="bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 px-6 py-2 rounded-lg font-semibold transition"
         >
           Voltar
@@ -22,7 +22,7 @@
         <a href="/feed/imoveis.xml" target="_blank" rel="noopener" class="bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 px-6 py-2 rounded-lg font-semibold transition">
           Exportar XML
         </a>
-        <Link href="/admin/properties/create" class="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded-lg font-semibold transition">
+        <Link :href="`${adminBase}/properties/create`" class="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded-lg font-semibold transition">
           Novo Imóvel
         </Link>
       </div>
@@ -123,7 +123,7 @@
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <template v-if="!isTrash">
-                  <Link :href="`/admin/properties/${property.id}/edit`" class="text-blue-600 hover:text-blue-800 font-medium">Editar</Link>
+                  <Link :href="`${adminBase}/properties/${property.id}/edit`" class="text-blue-600 hover:text-blue-800 font-medium">Editar</Link>
                   <button type="button" class="text-gray-700 hover:text-gray-900 font-medium" @click="duplicate(property.id)">Duplicar</button>
                   <button type="button" class="text-red-600 hover:text-red-800 font-medium" @click="remove(property.id)">Excluir</button>
                 </template>
@@ -147,8 +147,11 @@
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
+
+const page = usePage();
+const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 
 const props = defineProps({
   properties: {
@@ -203,15 +206,15 @@ const operationBadgeClass = (operation) => {
 };
 
 const remove = (id) => {
-  router.delete(`/admin/properties/${id}`);
+  router.delete(`${adminBase.value}/properties/${id}`);
 };
 
 const duplicate = (id) => {
-  router.post(`/admin/properties/${id}/duplicate`, {}, { preserveScroll: true });
+  router.post(`${adminBase.value}/properties/${id}/duplicate`, {}, { preserveScroll: true });
 };
 
 const applyFilters = () => {
-  const path = isTrash.value ? '/admin/properties/trash' : '/admin/properties';
+  const path = isTrash.value ? `${adminBase.value}/properties/trash` : `${adminBase.value}/properties`;
   router.get(path, { property_type_id: filters.property_type_id || undefined }, { preserveState: true, replace: true });
 };
 
@@ -221,11 +224,11 @@ const clearFilters = () => {
 };
 
 const restore = (id) => {
-  router.post(`/admin/properties/${id}/restore`, {}, { preserveScroll: true });
+  router.post(`${adminBase.value}/properties/${id}/restore`, {}, { preserveScroll: true });
 };
 
 const forceRemove = (id) => {
-  router.delete(`/admin/properties/${id}/force`, { preserveScroll: true });
+  router.delete(`${adminBase.value}/properties/${id}/force`, { preserveScroll: true });
 };
 
 const toggleSelected = (id) => {
@@ -247,7 +250,7 @@ const toggleSelectAll = () => {
 
 const applyBulk = () => {
   router.post(
-    '/admin/properties/bulk',
+    `${adminBase.value}/properties/bulk`,
     { action: bulkAction.value, ids: selectedIds.value },
     {
       preserveScroll: true,

@@ -63,9 +63,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { router, useForm } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import { router, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
+
+const page = usePage();
+const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 
 defineProps({
   items: {
@@ -79,7 +82,7 @@ const createForm = useForm({
 });
 
 const create = () => {
-  createForm.post('/admin/blog/categories', {
+  createForm.post(`${adminBase.value}/blog/categories`, {
     onSuccess: () => createForm.reset(),
   });
 };
@@ -106,13 +109,12 @@ const cancelEdit = () => {
 
 const saveEdit = () => {
   if (!editingId.value) return;
-  editForm.put(`/admin/blog/categories/${editingId.value}`, {
+  editForm.put(`${adminBase.value}/blog/categories/${editingId.value}`, {
     onSuccess: () => cancelEdit(),
   });
 };
 
 const remove = (id) => {
-  router.delete(`/admin/blog/categories/${id}`);
+  router.delete(`${adminBase.value}/blog/categories/${id}`);
 };
 </script>
-

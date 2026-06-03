@@ -4,7 +4,7 @@
 
     <div class="flex items-center justify-between mb-6">
       <h3 class="text-xl font-semibold text-gray-800">Lista de Postagens</h3>
-      <Link href="/admin/blog/posts/create" class="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded-lg font-semibold transition">
+      <Link :href="`${adminBase}/blog/posts/create`" class="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded-lg font-semibold transition">
         Nova Postagem
       </Link>
     </div>
@@ -36,7 +36,7 @@
             </td>
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
-                <Link :href="`/admin/blog/posts/${post.id}/edit`" class="text-blue-600 hover:text-blue-800 font-medium">Editar</Link>
+                <Link :href="`${adminBase}/blog/posts/${post.id}/edit`" class="text-blue-600 hover:text-blue-800 font-medium">Editar</Link>
                 <button @click="remove(post.id)" class="text-red-600 hover:text-red-800 font-medium">Excluir</button>
               </div>
             </td>
@@ -51,8 +51,12 @@
 </template>
 
 <script setup>
-import { Link, router } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
+
+const page = usePage();
+const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 
 defineProps({
   posts: {
@@ -66,7 +70,6 @@ defineProps({
 });
 
 const remove = (id) => {
-  router.delete(`/admin/blog/posts/${id}`);
+  router.delete(`${adminBase.value}/blog/posts/${id}`);
 };
 </script>
-

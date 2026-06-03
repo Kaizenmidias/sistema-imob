@@ -190,8 +190,11 @@
 
 <script setup>
 import { computed, ref } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
+
+const page = usePage();
+const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 
 const props = defineProps({
   propertyTypes: {
@@ -355,10 +358,10 @@ const submit = () => {
     .map((x) => x.existingPhotoId);
 
   if (isEdit.value) {
-    form.transform((data) => ({ ...data, _method: 'put' })).post(`/admin/properties/${props.property.id}`, { forceFormData: true });
+    form.transform((data) => ({ ...data, _method: 'put' })).post(`${adminBase.value}/properties/${props.property.id}`, { forceFormData: true });
     return;
   }
 
-  form.post('/admin/properties', { forceFormData: true });
+  form.post(`${adminBase.value}/properties`, { forceFormData: true });
 };
 </script>

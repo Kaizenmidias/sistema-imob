@@ -23,6 +23,7 @@ use App\Models\Setting;
 use App\Models\Page;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
@@ -48,6 +49,14 @@ class AdminController extends Controller
         if (!Auth::attempt(['email' => $validated['email'], 'password' => $validated['password']], $remember)) {
             return Redirect::back()
                 ->withErrors(['email' => 'Email ou senha inválidos.'])
+                ->withInput(['email' => $validated['email']]);
+        }
+
+        $user = $request->user();
+        if ($user && !$user->admin_enabled) {
+            Auth::logout();
+            return Redirect::back()
+                ->withErrors(['email' => 'Seu usuário não tem acesso ao painel.'])
                 ->withInput(['email' => $validated['email']]);
         }
 
@@ -1234,6 +1243,8 @@ class AdminController extends Controller
 
     public function updateSettings(Request $request)
     {
+        $isAdmin = $request->user() && $request->user()->role === 'admin';
+
         $validated = $request->validate([
             'nome_empresa' => ['nullable', 'string', 'max:255'],
             'telefone' => ['nullable', 'string', 'max:100'],
@@ -1243,6 +1254,20 @@ class AdminController extends Controller
             'instagram_url' => ['nullable', 'string', 'max:255'],
             'facebook_url' => ['nullable', 'string', 'max:255'],
             'linkedin_url' => ['nullable', 'string', 'max:255'],
+            'admin_path' => [
+                'nullable',
+                'string',
+                'max:50',
+                'regex:/^[A-Za-z0-9][A-Za-z0-9\\-]*$/',
+                Rule::notIn(['/', 'storage', 'feed', 'imoveis', 'blog', 'contato']),
+            ],
+            'login_path' => [
+                'nullable',
+                'string',
+                'max:50',
+                'regex:/^[A-Za-z0-9][A-Za-z0-9\\-]*$/',
+                Rule::notIn(['/', 'storage', 'feed', 'imoveis', 'blog', 'contato']),
+            ],
             'about_hero_title_primary' => ['nullable', 'string', 'max:255'],
             'about_hero_title_secondary' => ['nullable', 'string', 'max:255'],
             'about_hero_subtitle' => ['nullable', 'string', 'max:500'],
@@ -1283,6 +1308,16 @@ class AdminController extends Controller
             'about_team_member_2_photo_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
 
+        if (!$isAdmin) {
+            unset($validated['admin_path'], $validated['login_path']);
+        }
+
+        if ($isAdmin && !empty($validated['admin_path']) && !empty($validated['login_path']) && $validated['admin_path'] === $validated['login_path']) {
+            return Redirect::back()->withErrors([
+                'login_path' => 'O link do login não pode ser igual ao link do painel.',
+            ]);
+        }
+
         $fileMap = [
             'about_hero_background_image_file' => 'about_hero_background_image',
             'about_essence_image_file' => 'about_essence_image',
@@ -1312,7 +1347,105 @@ class AdminController extends Controller
             );
         }
 
-        return Redirect::route('admin.settings');
+        $adminPath = 'admin';
+        try {
+            $adminPath = trim((string) (Setting::where('chave', 'admin_path')->value('valor') ?: 'admin'), '/');
+        } catch (\Throwable) {
+            $adminPath = 'admin';
+        }
+        $adminPath = $adminPath !== '' ? $adminPath : 'admin';
+
+        return Redirect::to('/' . $adminPath . '/settings');
+    }
+
+    public function users(): Response
+    {
+        $users = User::query()
+            ->orderBy('id')
+            ->get(['id', 'name', 'email', 'role', 'admin_enabled', 'created_at']);
+
+        return Inertia::render('Admin/Users', [
+            'users' => $users,
+        ]);
+    }
+
+    public function createUser(): Response
+    {
+        return Inertia::render('Admin/UserCreate');
+    }
+
+    public function storeUser(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'role' => ['required', 'string', Rule::in(['admin', 'user'])],
+            'admin_enabled' => ['required', 'boolean'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'role' => $validated['role'],
+            'admin_enabled' => (bool) $validated['admin_enabled'],
+            'password' => $validated['password'],
+        ]);
+
+        return Redirect::route('admin.users');
+    }
+
+    public function editUser(User $user): Response
+    {
+        return Inertia::render('Admin/UserEdit', [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'admin_enabled' => (bool) $user->admin_enabled,
+                'profile_photo_url' => !empty($user->profile_photo_path) ? url('/storage/' . ltrim($user->profile_photo_path, '/')) : null,
+            ],
+        ]);
+    }
+
+    public function updateUser(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'role' => ['required', 'string', Rule::in(['admin', 'user'])],
+            'admin_enabled' => ['required', 'boolean'],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $payload = [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'role' => $validated['role'],
+            'admin_enabled' => (bool) $validated['admin_enabled'],
+        ];
+
+        if (!empty($validated['password'])) {
+            $payload['password'] = $validated['password'];
+        }
+
+        $user->update($payload);
+
+        return Redirect::route('admin.users');
+    }
+
+    public function destroyUser(User $user)
+    {
+        if ((int) $user->id === (int) Auth::id()) {
+            return Redirect::back()->withErrors([
+                'user' => 'Você não pode excluir seu próprio usuário.',
+            ]);
+        }
+
+        $user->delete();
+
+        return Redirect::route('admin.users');
     }
 
     public function instagram(): Response

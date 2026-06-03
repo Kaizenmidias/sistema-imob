@@ -71,8 +71,11 @@
 
 <script setup>
 import { computed, ref } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
+
+const page = usePage();
+const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 
 const props = defineProps({
   user: {
@@ -125,7 +128,7 @@ function reset() {
 }
 
 function save() {
-  form.post('/admin/profile', {
+  form.post(`${adminBase.value}/profile`, {
     method: 'put',
     forceFormData: true,
     preserveScroll: true,

@@ -6,7 +6,25 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CalculatorController;
 use App\Http\Controllers\AdminController;
+use App\Http\Middleware\EnsureAdminRole;
+use App\Http\Middleware\EnsureCanAccessAdmin;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Route;
+
+$adminPath = 'admin';
+$loginPath = 'login';
+
+try {
+    $settings = Setting::query()->pluck('valor', 'chave');
+    $adminPath = trim((string) ($settings['admin_path'] ?? 'admin'), '/');
+    $loginPath = trim((string) ($settings['login_path'] ?? 'login'), '/');
+} catch (\Throwable) {
+    $adminPath = 'admin';
+    $loginPath = 'login';
+}
+
+$adminPath = $adminPath !== '' ? $adminPath : 'admin';
+$loginPath = $loginPath !== '' ? $loginPath : 'login';
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/feed/imoveis.xml', [HomeController::class, 'feedImoveisXml'])->name('feed.imoveis');
@@ -25,12 +43,18 @@ Route::get('/contato', [ContactController::class, 'index'])->name('contact');
 Route::get('/instagram/media/{mediaId}', [HomeController::class, 'instagramMedia'])->name('instagram.media');
 Route::get('/storage/{path}', [HomeController::class, 'storageMedia'])->where('path', '.*')->name('storage.media');
 
-Route::middleware('guest')->get('/login', [AdminController::class, 'showLogin'])->name('login');
-Route::middleware('guest')->post('/login', [AdminController::class, 'login'])->name('login.store');
+Route::middleware('guest')->get("/{$loginPath}", [AdminController::class, 'showLogin'])->name('login');
+Route::middleware('guest')->post("/{$loginPath}", [AdminController::class, 'login'])->name('login.store');
+
+if ($loginPath !== 'login') {
+    Route::middleware('guest')->get('/login', fn () => redirect("/{$loginPath}"));
+    Route::middleware('guest')->post('/login', [AdminController::class, 'login']);
+}
+
 Route::post('/logout', [AdminController::class, 'logout'])->middleware('auth')->name('logout');
 
 // Admin Routes
-Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
+Route::prefix($adminPath)->name('admin.')->middleware(['auth', EnsureCanAccessAdmin::class])->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('dashboard');
     Route::get('/properties', [AdminController::class, 'properties'])->name('properties');
     Route::get('/properties/trash', [AdminController::class, 'propertiesTrash'])->name('properties.trash');
@@ -76,6 +100,14 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/instagram', [AdminController::class, 'instagram'])->name('instagram');
     Route::put('/instagram', [AdminController::class, 'updateInstagram'])->name('instagram.update');
     Route::post('/instagram/refresh', [AdminController::class, 'refreshInstagramFeed'])->name('instagram.refresh');
+    Route::middleware(EnsureAdminRole::class)->group(function () {
+        Route::get('/users', [AdminController::class, 'users'])->name('users');
+        Route::get('/users/create', [AdminController::class, 'createUser'])->name('users.create');
+        Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
+        Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('users.edit');
+        Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
+        Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
+    });
 
     Route::prefix('blog')->name('blog.')->group(function () {
         Route::get('/posts', [AdminController::class, 'blogPosts'])->name('posts');
@@ -90,6 +122,13 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::delete('/categories/{category}', [AdminController::class, 'destroyBlogCategory'])->name('categories.destroy');
     });
 });
+
+if ($adminPath !== 'admin') {
+    Route::middleware(['auth', EnsureCanAccessAdmin::class])->get('/admin/{any?}', function (?string $any = null) use ($adminPath) {
+        $tail = $any ? '/' . ltrim($any, '/') : '';
+        return redirect('/' . $adminPath . $tail);
+    })->where('any', '.*');
+}
 
 // Form submissions
 Route::post('/contato/send', [ContactController::class, 'send'])->name('contact.send');

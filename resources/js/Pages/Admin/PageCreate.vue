@@ -3,7 +3,7 @@
     <template #pageTitle>Nova Página</template>
 
     <div class="mb-6">
-      <Link href="/admin/pages" class="text-blue-700 hover:text-blue-900 font-semibold">Voltar</Link>
+      <Link :href="`${adminBase}/pages`" class="text-blue-700 hover:text-blue-900 font-semibold">Voltar</Link>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -117,9 +117,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { Link, useForm } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import { Link, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
+
+const page = usePage();
+const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 
 const form = useForm({
   titulo: '',
@@ -155,6 +158,6 @@ const clearBanner = () => {
 };
 
 const save = () => {
-  form.post('/admin/pages', { forceFormData: true });
+  form.post(`${adminBase.value}/pages`, { forceFormData: true });
 };
 </script>

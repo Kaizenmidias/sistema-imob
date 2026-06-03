@@ -4,7 +4,7 @@
     
     <div class="flex items-center justify-between mb-6">
       <h3 class="text-xl font-semibold text-gray-800">Lista de Páginas</h3>
-      <Link href="/admin/pages/create" class="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded-lg font-semibold transition">
+      <Link :href="`${adminBase}/pages/create`" class="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded-lg font-semibold transition">
         Nova Página
       </Link>
     </div>
@@ -30,7 +30,7 @@
             </td>
             <td class="px-6 py-4">
               <div class="flex items-center gap-4">
-                <Link :href="`/admin/pages/${page.id}`" class="text-blue-600 hover:text-blue-800 font-medium">Editar</Link>
+                <Link :href="`${adminBase}/pages/${page.id}`" class="text-blue-600 hover:text-blue-800 font-medium">Editar</Link>
                 <button type="button" class="text-gray-700 hover:text-gray-900 font-medium" @click="duplicate(page.id)">Duplicar</button>
                 <button type="button" class="text-red-600 hover:text-red-800 font-medium" @click="remove(page.id)">Excluir</button>
               </div>
@@ -46,8 +46,12 @@
 </template>
 
 <script setup>
-import { Link, router } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
+
+const page = usePage();
+const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 
 defineProps({
   pages: {
@@ -57,10 +61,10 @@ defineProps({
 });
 
 const duplicate = (id) => {
-  router.post(`/admin/pages/${id}/duplicate`);
+  router.post(`${adminBase.value}/pages/${id}/duplicate`);
 };
 
 const remove = (id) => {
-  router.delete(`/admin/pages/${id}`);
+  router.delete(`${adminBase.value}/pages/${id}`);
 };
 </script>

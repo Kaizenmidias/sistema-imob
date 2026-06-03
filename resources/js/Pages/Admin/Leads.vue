@@ -99,7 +99,7 @@
                 <a
                   v-if="lead.property?.id"
                   class="truncate text-blue-800 hover:text-blue-600"
-                  :href="`/admin/properties/${lead.property.id}/edit`"
+                  :href="`${adminBase}/properties/${lead.property.id}/edit`"
                   @click.stop
                 >
                   Imóvel: {{ lead.property?.titulo || `#${lead.property.id}` }}
@@ -151,7 +151,7 @@
               </div>
               <div v-if="selectedLead.property?.id">
                 <div class="text-xs font-semibold text-gray-500">Imóvel</div>
-                <a class="text-sm text-blue-800 hover:text-blue-600" :href="`/admin/properties/${selectedLead.property.id}/edit`">
+                <a class="text-sm text-blue-800 hover:text-blue-600" :href="`${adminBase}/properties/${selectedLead.property.id}/edit`">
                   {{ selectedLead.property?.titulo || `#${selectedLead.property.id}` }}
                 </a>
               </div>
@@ -297,6 +297,7 @@ const defaultStatuses = [
 
 const page = usePage();
 const sharedSettings = computed(() => page.props?.settings || {});
+const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 
 function parseKanbanColumns() {
   const raw = sharedSettings.value?.leads_kanban_columns;
@@ -461,7 +462,7 @@ function updateLead(id, payload) {
     }
   }
 
-  router.patch(`/admin/leads/${id}`, payload, {
+  router.patch(`${adminBase.value}/leads/${id}`, payload, {
     preserveScroll: true,
     onError: () => {
       lead.status = previous.status;
@@ -489,7 +490,7 @@ function saveLead() {
   lead.status = payload.status || lead.status;
   lead.proximo_contato_em = payload.proximo_contato_em ? payload.proximo_contato_em.replace(' ', 'T') : null;
 
-  router.patch(`/admin/leads/${id}`, payload, {
+  router.patch(`${adminBase.value}/leads/${id}`, payload, {
     preserveScroll: true,
     onFinish: () => {
       saving.value = false;
@@ -570,7 +571,7 @@ function saveSettings() {
   const cols = sanitizeColumns();
   settingsForm.kanban_columns = cols;
 
-  settingsForm.put('/admin/leads/settings', {
+  settingsForm.put(`${adminBase.value}/leads/settings`, {
     preserveScroll: true,
     onSuccess: () => {
       statuses.value = cols;

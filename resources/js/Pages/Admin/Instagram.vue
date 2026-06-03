@@ -56,8 +56,11 @@
 
 <script setup>
 import { computed, ref } from 'vue';
-import { router, useForm } from '@inertiajs/vue3';
+import { router, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
+
+const page = usePage();
+const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 
 const props = defineProps({
   settings: {
@@ -79,16 +82,15 @@ const form = useForm({
 const refreshing = ref(false);
 
 const save = () => {
-  form.put('/admin/instagram');
+  form.put(`${adminBase.value}/instagram`);
 };
 
 const refresh = () => {
   refreshing.value = true;
-  router.post('/admin/instagram/refresh', {}, { onFinish: () => (refreshing.value = false) });
+  router.post(`${adminBase.value}/instagram/refresh`, {}, { onFinish: () => (refreshing.value = false) });
 };
 
 const feedCount = computed(() => props.instagramFeed?.length || 0);
 const feedPreview = computed(() => (props.instagramFeed || []).slice(0, 9));
 const lastRefresh = computed(() => props.settings?.instagram_last_refresh || '');
 </script>
-
