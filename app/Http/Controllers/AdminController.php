@@ -217,10 +217,6 @@ class AdminController extends Controller
         $propertyViewsInRange = $this->safeCountTableBetween('property_views', $rangeStart, $rangeEnd);
         $propertyViewsPrev = $this->safeCountTableBetween('property_views', $prevStart, $prevEnd);
 
-        $propertiesValueTotal = (float) Property::query()->where('ativo', true)->sum('valor');
-        $propertiesValueNewInRange = (float) Property::query()->where('ativo', true)->whereBetween('created_at', [$rangeStart, $rangeEnd])->sum('valor');
-        $propertiesValuePrev = (float) Property::query()->where('ativo', true)->whereBetween('created_at', [$prevStart, $prevEnd])->sum('valor');
-
         $kpis = [
             'properties_active' => $propertiesActive,
             'properties_active_delta' => $this->percentDelta($propertiesActiveNewInRange, $propertiesActiveNewPrev),
@@ -233,8 +229,6 @@ class AdminController extends Controller
             'property_views_total_delta' => $this->percentDelta($propertyViewsInRange, $propertyViewsPrev),
             'contacts_total' => $contactsTotal,
             'contacts_total_delta' => $this->percentDelta($contactsInRange, $contactsPrev),
-            'properties_value_total' => $propertiesValueTotal,
-            'properties_value_total_delta' => $this->percentDelta($propertiesValueNewInRange, $propertiesValuePrev),
         ];
 
         $propertyStatus = [

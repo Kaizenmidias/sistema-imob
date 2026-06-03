@@ -20,14 +20,22 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         <div
           v-for="card in kpiCards"
           :key="card.key"
           class="bg-white rounded-xl shadow border border-gray-200 p-5"
         >
-          <div class="flex items-start justify-between gap-4">
-            <div>
+          <div class="flex items-start gap-4">
+            <div class="w-11 h-11 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-700 flex-shrink-0">
+              <svg v-if="card.icon === 'home'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9v9a2 2 0 01-2 2h-4a2 2 0 01-2-2V12H9v7a2 2 0 01-2 2H3v-9z"/></svg>
+              <svg v-else-if="card.icon === 'star'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l2.21 6.804a1 1 0 00.95.69h7.154c.969 0 1.371 1.24.588 1.81l-5.79 4.205a1 1 0 00-.364 1.118l2.21 6.804c.3.921-.755 1.688-1.54 1.118l-5.79-4.205a1 1 0 00-1.176 0l-5.79 4.205c-.784.57-1.838-.197-1.539-1.118l2.21-6.804a1 1 0 00-.364-1.118L.1 12.231c-.783-.57-.38-1.81.588-1.81h7.154a1 1 0 00.95-.69l2.21-6.804z"/></svg>
+              <svg v-else-if="card.icon === 'users'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H2v-2a4 4 0 014-4h1m6-4a4 4 0 10-8 0 4 4 0 008 0zm6 4a3 3 0 10-6 0 3 3 0 006 0z"/></svg>
+              <svg v-else-if="card.icon === 'bolt'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              <svg v-else-if="card.icon === 'eye'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              <svg v-else-if="card.icon === 'mail'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l9 6 9-6M4 6h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg>
+            </div>
+            <div class="min-w-0 flex-1">
               <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide">{{ card.title }}</div>
               <div class="text-3xl font-extrabold mt-2" :class="card.accent">{{ card.value }}</div>
               <div class="text-sm text-gray-600 mt-1">{{ card.subtitle }}</div>
@@ -38,15 +46,6 @@
                 <div v-else class="font-bold text-gray-400">—</div>
                 <div class="text-gray-500">vs. período anterior</div>
               </div>
-            </div>
-            <div class="w-11 h-11 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-700">
-              <svg v-if="card.icon === 'home'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9v9a2 2 0 01-2 2h-4a2 2 0 01-2-2V12H9v7a2 2 0 01-2 2H3v-9z"/></svg>
-              <svg v-else-if="card.icon === 'star'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l2.21 6.804a1 1 0 00.95.69h7.154c.969 0 1.371 1.24.588 1.81l-5.79 4.205a1 1 0 00-.364 1.118l2.21 6.804c.3.921-.755 1.688-1.54 1.118l-5.79-4.205a1 1 0 00-1.176 0l-5.79 4.205c-.784.57-1.838-.197-1.539-1.118l2.21-6.804a1 1 0 00-.364-1.118L.1 12.231c-.783-.57-.38-1.81.588-1.81h7.154a1 1 0 00.95-.69l2.21-6.804z"/></svg>
-              <svg v-else-if="card.icon === 'users'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H2v-2a4 4 0 014-4h1m6-4a4 4 0 10-8 0 4 4 0 008 0zm6 4a3 3 0 10-6 0 3 3 0 006 0z"/></svg>
-              <svg v-else-if="card.icon === 'bolt'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-              <svg v-else-if="card.icon === 'eye'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-              <svg v-else-if="card.icon === 'mail'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l9 6 9-6M4 6h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg>
-              <svg v-else-if="card.icon === 'cash'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2m4-4H9m12 0l-3-3m3 3l-3 3"/></svg>
             </div>
           </div>
         </div>
@@ -343,11 +342,6 @@ function formatNumber(value) {
   return n.toLocaleString('pt-BR');
 }
 
-function formatCurrency(value) {
-  const n = Number(value || 0);
-  return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
-
 function formatDateTime(value) {
   if (!value) return '';
   const d = new Date(value);
@@ -425,15 +419,6 @@ const kpiCards = computed(() => [
     delta: props.kpis?.contacts_total_delta ?? null,
     icon: 'mail',
     accent: 'text-orange-600',
-  },
-  {
-    key: 'properties_value_total',
-    title: 'Valor em Imóveis',
-    value: formatCurrency(props.kpis?.properties_value_total),
-    subtitle: 'Valor total dos imóveis ativos',
-    delta: props.kpis?.properties_value_total_delta ?? null,
-    icon: 'cash',
-    accent: 'text-pink-700',
   },
 ]);
 
