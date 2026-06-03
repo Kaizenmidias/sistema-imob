@@ -28,18 +28,12 @@
       </div>
 
       <div class="bg-white/10 backdrop-blur-xl border border-white/15 rounded-3xl p-8 shadow-2xl">
-        <div class="flex items-center gap-3">
-          <img v-if="logoUrl" :src="logoUrl" alt="Logo" class="h-10 w-auto object-contain" />
-          <div v-else class="h-10 w-10 rounded-xl bg-white/15 border border-white/20"></div>
-          <div class="leading-tight">
-            <div class="text-sm text-white/70">Acesso</div>
-            <div class="font-semibold">Login</div>
-          </div>
+        <div class="flex flex-col items-center justify-center gap-3">
+          <img v-if="logoUrl" :src="logoUrl" alt="Logo" class="h-12 w-auto object-contain" />
+          <div v-else class="h-12 w-12 rounded-xl bg-white/15 border border-white/20"></div>
         </div>
 
         <div class="mt-8">
-          <div class="text-sm text-white/70 mb-2">ou continue com email</div>
-
           <form class="space-y-4" @submit.prevent="submit">
             <div>
               <label class="block text-sm font-medium text-white/90 mb-2">Email</label>
