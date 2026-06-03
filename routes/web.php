@@ -33,12 +33,16 @@ Route::post('/logout', [AdminController::class, 'logout'])->middleware('auth')->
 Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('dashboard');
     Route::get('/properties', [AdminController::class, 'properties'])->name('properties');
+    Route::get('/properties/trash', [AdminController::class, 'propertiesTrash'])->name('properties.trash');
     Route::get('/properties/create', [AdminController::class, 'createProperty'])->name('properties.create');
     Route::post('/properties', [AdminController::class, 'storeProperty'])->name('properties.store');
     Route::get('/properties/{property}/edit', [AdminController::class, 'editProperty'])->name('properties.edit');
     Route::put('/properties/{property}', [AdminController::class, 'updateProperty'])->name('properties.update');
     Route::delete('/properties/{property}', [AdminController::class, 'destroyProperty'])->name('properties.destroy');
     Route::post('/properties/{property}/duplicate', [AdminController::class, 'duplicateProperty'])->name('properties.duplicate');
+    Route::post('/properties/{property}/restore', [AdminController::class, 'restoreProperty'])->name('properties.restore');
+    Route::delete('/properties/{property}/force', [AdminController::class, 'forceDestroyProperty'])->name('properties.force-destroy');
+    Route::post('/properties/bulk', [AdminController::class, 'bulkProperties'])->name('properties.bulk');
     Route::get('/business-types', [AdminController::class, 'businessTypes'])->name('business-types');
     Route::post('/business-types', [AdminController::class, 'storeBusinessType'])->name('business-types.store');
     Route::put('/business-types/{businessType}', [AdminController::class, 'updateBusinessType'])->name('business-types.update');

@@ -149,6 +149,27 @@ class AdminController extends Controller
             'properties' => $properties,
             'propertyTypes' => $propertyTypes,
             'selectedPropertyTypeId' => $selectedPropertyTypeId,
+            'isTrash' => false,
+        ]);
+    }
+
+    public function propertiesTrash(Request $request): Response
+    {
+        $propertyTypes = PropertyType::orderBy('nome_tipo')->orderBy('nome_subtipo')->get(['id', 'nome_tipo', 'nome_subtipo']);
+        $selectedPropertyTypeId = $request->query('property_type_id');
+        $selectedPropertyTypeId = is_null($selectedPropertyTypeId) ? null : (int) $selectedPropertyTypeId;
+
+        $properties = Property::onlyTrashed()
+            ->with(['propertyType', 'businessType', 'photos'])
+            ->when($selectedPropertyTypeId, fn ($q) => $q->where('tipo_propriedade_id', $selectedPropertyTypeId))
+            ->orderByDesc('deleted_at')
+            ->get();
+
+        return Inertia::render('Admin/Properties', [
+            'properties' => $properties,
+            'propertyTypes' => $propertyTypes,
+            'selectedPropertyTypeId' => $selectedPropertyTypeId,
+            'isTrash' => true,
         ]);
     }
     
@@ -396,16 +417,88 @@ class AdminController extends Controller
 
     public function destroyProperty(Property $property)
     {
-        $property->load(['photos', 'specialCategories']);
-
-        foreach ($property->photos as $photo) {
-            Storage::disk('public')->delete($photo->arquivo);
-        }
-
-        $property->specialCategories()->detach();
         $property->delete();
 
         return Redirect::route('admin.properties');
+    }
+
+    public function restoreProperty(int $property)
+    {
+        $model = Property::withTrashed()->findOrFail($property);
+        $model->restore();
+
+        return Redirect::route('admin.properties.trash');
+    }
+
+    public function forceDestroyProperty(int $property)
+    {
+        $model = Property::withTrashed()->findOrFail($property);
+        $model->load(['photos', 'specialCategories', 'features']);
+        $this->purgeProperty($model);
+
+        return Redirect::route('admin.properties.trash');
+    }
+
+    public function bulkProperties(Request $request)
+    {
+        $validated = $request->validate([
+            'action' => ['required', 'string', 'max:50'],
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $action = $validated['action'];
+        $ids = collect($validated['ids'])->map(fn ($v) => (int) $v)->filter()->unique()->values()->all();
+        if (!count($ids)) {
+            return Redirect::back();
+        }
+
+        if (in_array($action, ['restore', 'force_delete'], true)) {
+            $items = Property::withTrashed()
+                ->whereIn('id', $ids)
+                ->get();
+        } else {
+            $items = Property::query()
+                ->whereIn('id', $ids)
+                ->get();
+        }
+
+        if ($action === 'delete') {
+            foreach ($items as $p) {
+                $p->delete();
+            }
+        } elseif ($action === 'restore') {
+            foreach ($items as $p) {
+                if (method_exists($p, 'restore')) {
+                    $p->restore();
+                }
+            }
+        } elseif ($action === 'force_delete') {
+            foreach ($items as $p) {
+                $p->loadMissing(['photos', 'specialCategories', 'features']);
+                $this->purgeProperty($p);
+            }
+        } elseif ($action === 'activate') {
+            Property::withTrashed()->whereIn('id', $ids)->update(['ativo' => true]);
+        } elseif ($action === 'deactivate') {
+            Property::withTrashed()->whereIn('id', $ids)->update(['ativo' => false]);
+        }
+
+        return Redirect::back();
+    }
+
+    private function purgeProperty(Property $property): void
+    {
+        foreach ($property->photos as $photo) {
+            if (!empty($photo->arquivo)) {
+                Storage::disk('public')->delete($photo->arquivo);
+            }
+            $photo->delete();
+        }
+
+        $property->specialCategories()->detach();
+        $property->features()->detach();
+        $property->forceDelete();
     }
 
     public function duplicateProperty(Property $property)
