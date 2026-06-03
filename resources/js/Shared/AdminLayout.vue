@@ -18,28 +18,28 @@
       </div>
       
       <nav class="mt-6 flex-1">
-        <Link :href="adminBase" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
+        <Link v-if="can('dashboard')" :href="adminBase" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
           </svg>
           <span>Dashboard</span>
         </Link>
         
-        <Link :href="`${adminBase}/properties`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
+        <Link v-if="can('properties')" :href="`${adminBase}/properties`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
           </svg>
           <span>Imóveis</span>
         </Link>
 
-        <Link :href="`${adminBase}/business-types`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
+        <Link v-if="can('business_types')" :href="`${adminBase}/business-types`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h6m6-10h2a2 2 0 012 2v4a2 2 0 01-2 2h-2m-6 0h6"></path>
           </svg>
           <span>Tipos de Negócio</span>
         </Link>
 
-        <details class="group">
+        <details v-if="can('properties')" class="group">
           <summary class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition cursor-pointer select-none">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V7a2 2 0 00-2-2H6a2 2 0 00-2 2v6m16 0v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6m16 0H4"></path>
@@ -56,14 +56,14 @@
           </div>
         </details>
         
-        <Link :href="`${adminBase}/pages`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
+        <Link v-if="can('pages')" :href="`${adminBase}/pages`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
           </svg>
           <span>Páginas</span>
         </Link>
 
-        <details class="group">
+        <details v-if="can('pages')" class="group">
           <summary class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition cursor-pointer select-none">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2"></path>
@@ -80,21 +80,21 @@
           </div>
         </details>
         
-        <Link :href="`${adminBase}/appearance`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
+        <Link v-if="can('appearance')" :href="`${adminBase}/appearance`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
           </svg>
           <span>Aparência</span>
         </Link>
         
-        <Link :href="`${adminBase}/leads`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
+        <Link v-if="can('leads')" :href="`${adminBase}/leads`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
           </svg>
           <span>Leads</span>
         </Link>
         
-        <Link :href="`${adminBase}/settings`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
+        <Link v-if="can('settings')" :href="`${adminBase}/settings`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z"></path>
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -102,7 +102,7 @@
           <span>Configurações</span>
         </Link>
 
-        <Link :href="`${adminBase}/instagram`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
+        <Link v-if="can('instagram')" :href="`${adminBase}/instagram`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 7c2.761 0 5 2.239 5 5s-2.239 5-5 5-5-2.239-5-5 2.239-5 5-5z"></path>
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.5 3h-9A4.5 4.5 0 003 7.5v9A4.5 4.5 0 007.5 21h9a4.5 4.5 0 004.5-4.5v-9A4.5 4.5 0 0016.5 3z"></path>
@@ -166,6 +166,12 @@ const page = usePage();
 const user = computed(() => page.props?.auth?.user || null);
 const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 const isAdmin = computed(() => user.value?.role === 'admin');
+const permissions = computed(() => (Array.isArray(user.value?.permissions) ? user.value.permissions.map((p) => String(p)) : []));
+
+const can = (key) => {
+  if (isAdmin.value) return true;
+  return permissions.value.includes(key);
+};
 
 const initials = computed(() => {
   const name = String(user.value?.name || '').trim();

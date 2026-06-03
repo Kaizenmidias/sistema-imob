@@ -1382,13 +1382,23 @@ class AdminController extends Controller
             'role' => ['required', 'string', Rule::in(['admin', 'user'])],
             'admin_enabled' => ['required', 'boolean'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', Rule::in($this->adminPermissionKeys())],
         ]);
+
+        $permissions = collect($validated['permissions'] ?? [])
+            ->map(fn ($v) => trim((string) $v))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
 
         User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'role' => $validated['role'],
             'admin_enabled' => (bool) $validated['admin_enabled'],
+            'permissions' => $permissions,
             'password' => $validated['password'],
         ]);
 
@@ -1404,6 +1414,7 @@ class AdminController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'admin_enabled' => (bool) $user->admin_enabled,
+                'permissions' => is_array($user->permissions) ? $user->permissions : [],
                 'profile_photo_url' => !empty($user->profile_photo_path) ? url('/storage/' . ltrim($user->profile_photo_path, '/')) : null,
             ],
         ]);
@@ -1417,13 +1428,23 @@ class AdminController extends Controller
             'role' => ['required', 'string', Rule::in(['admin', 'user'])],
             'admin_enabled' => ['required', 'boolean'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', Rule::in($this->adminPermissionKeys())],
         ]);
+
+        $permissions = collect($validated['permissions'] ?? [])
+            ->map(fn ($v) => trim((string) $v))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
 
         $payload = [
             'name' => $validated['name'],
             'email' => $validated['email'],
             'role' => $validated['role'],
             'admin_enabled' => (bool) $validated['admin_enabled'],
+            'permissions' => $permissions,
         ];
 
         if (!empty($validated['password'])) {
@@ -1433,6 +1454,21 @@ class AdminController extends Controller
         $user->update($payload);
 
         return Redirect::route('admin.users');
+    }
+
+    private function adminPermissionKeys(): array
+    {
+        return [
+            'dashboard',
+            'properties',
+            'business_types',
+            'pages',
+            'appearance',
+            'leads',
+            'settings',
+            'instagram',
+            'users',
+        ];
     }
 
     public function destroyUser(User $user)

@@ -35,6 +35,25 @@
         </div>
 
         <div class="md:col-span-2">
+          <label class="block text-gray-700 mb-2 text-sm font-medium">Abas do painel (acessos)</label>
+          <select
+            v-model="form.permissions"
+            multiple
+            class="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white"
+            :disabled="isAdminSelected"
+            size="9"
+          >
+            <option v-for="opt in permissionOptions" :key="opt.key" :value="opt.key">
+              {{ opt.label }}
+            </option>
+          </select>
+          <div class="text-xs text-gray-500 mt-2">Para selecionar mais de uma opção, use Ctrl + Clique.</div>
+          <div v-if="isAdminSelected" class="text-xs text-gray-500 mt-2">Administrador sempre tem acesso total.</div>
+          <div v-if="form.errors.permissions" class="text-sm text-red-600 mt-1">{{ form.errors.permissions }}</div>
+          <div v-if="form.errors['permissions.0']" class="text-sm text-red-600 mt-1">{{ form.errors['permissions.0'] }}</div>
+        </div>
+
+        <div class="md:col-span-2">
           <label class="block text-gray-700 mb-2 text-sm font-medium">Senha</label>
           <input v-model="form.password" type="password" class="w-full border border-gray-300 rounded-lg px-4 py-3" />
           <div v-if="form.errors.password" class="text-sm text-red-600 mt-1">{{ form.errors.password }}</div>
@@ -62,24 +81,63 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
 
 const page = usePage();
 const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 
+const permissionOptions = [
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'properties', label: 'Imóveis' },
+  { key: 'business_types', label: 'Tipos de Negócio' },
+  { key: 'pages', label: 'Páginas' },
+  { key: 'appearance', label: 'Aparência' },
+  { key: 'leads', label: 'Leads' },
+  { key: 'settings', label: 'Configurações' },
+  { key: 'instagram', label: 'Instagram' },
+  { key: 'users', label: 'Usuários' },
+];
+
+const defaultPermissions = [
+  'dashboard',
+  'properties',
+  'business_types',
+  'pages',
+  'appearance',
+  'leads',
+  'settings',
+  'instagram',
+];
+
 const form = useForm({
   name: '',
   email: '',
   role: 'user',
   admin_enabled: true,
+  permissions: [...defaultPermissions],
   password: '',
   password_confirmation: '',
 });
+
+const isAdminSelected = computed(() => form.role === 'admin');
+
+watch(
+  () => form.role,
+  (role) => {
+    if (role === 'admin') {
+      form.permissions = permissionOptions.map((o) => o.key);
+    } else if (!Array.isArray(form.permissions) || form.permissions.length === 0) {
+      form.permissions = [...defaultPermissions];
+    } else {
+      form.permissions = form.permissions.filter((k) => k !== 'users');
+    }
+  },
+  { immediate: true }
+);
 
 const save = () => {
   form.post(`${adminBase.value}/users`, { preserveScroll: true });
 };
 </script>
-
