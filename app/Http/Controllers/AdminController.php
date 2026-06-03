@@ -153,6 +153,7 @@ class AdminController extends Controller
             'leads_total' => Lead::query()->count(),
             'leads_today' => Lead::query()->whereDate('created_at', $now->toDateString())->count(),
             'property_views_total' => $this->safeCountTable('property_views'),
+            'property_views_today' => $this->safeCountTableToday('property_views'),
             'contacts_total' => Lead::query()->where('origem', 'Site - Contato')->count(),
         ];
 
@@ -240,6 +241,15 @@ class AdminController extends Controller
     {
         try {
             return (int) DB::table($table)->count();
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    private function safeCountTableToday(string $table): int
+    {
+        try {
+            return (int) DB::table($table)->whereDate('created_at', now()->toDateString())->count();
         } catch (\Throwable) {
             return 0;
         }

@@ -3,6 +3,13 @@
     <template #pageTitle>Dashboard</template>
 
     <div class="space-y-8">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <CompactKpi title="Imóveis" :value="formatNumber(kpis.properties_active)" accent="text-blue-900" />
+        <CompactKpi title="Leads" :value="formatNumber(kpis.leads_total)" accent="text-emerald-700" />
+        <CompactKpi title="Visitas Hoje" :value="formatNumber(kpis.property_views_today)" accent="text-orange-600" />
+        <CompactKpi title="Novos Leads Hoje" :value="formatNumber(kpis.leads_today)" accent="text-purple-700" />
+      </div>
+
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         <KpiCard title="Imóveis Ativos" :value="formatNumber(kpis.properties_active)" icon="home" accent="text-blue-900" />
         <KpiCard title="Imóveis em Destaque" :value="formatNumber(kpis.properties_featured)" icon="star" accent="text-indigo-700" />
@@ -278,6 +285,20 @@ const SmallCard = {
     <div class="bg-white rounded-xl shadow border border-gray-200 p-4">
       <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide">{{ title }}</div>
       <div class="text-2xl font-extrabold text-gray-900 mt-2">{{ value }}</div>
+    </div>
+  `,
+};
+
+const CompactKpi = {
+  props: {
+    title: { type: String, required: true },
+    value: { type: String, required: true },
+    accent: { type: String, default: 'text-gray-900' },
+  },
+  template: `
+    <div class="bg-white rounded-xl shadow border border-gray-200 p-5">
+      <div class="text-3xl font-extrabold" :class="accent">{{ value }}</div>
+      <div class="text-gray-600 text-sm font-semibold mt-1">{{ title }}</div>
     </div>
   `,
 };
