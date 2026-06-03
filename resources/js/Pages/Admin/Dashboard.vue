@@ -3,29 +3,89 @@
     <template #pageTitle>Dashboard</template>
 
     <div class="space-y-8">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <CompactKpi title="Imóveis" :value="formatNumber(kpis.properties_active)" accent="text-blue-900" />
-        <CompactKpi title="Leads" :value="formatNumber(kpis.leads_total)" accent="text-emerald-700" />
-        <CompactKpi title="Visitas Hoje" :value="formatNumber(kpis.property_views_today)" accent="text-orange-600" />
-        <CompactKpi title="Novos Leads Hoje" :value="formatNumber(kpis.leads_today)" accent="text-purple-700" />
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div class="text-sm text-gray-500">Bem-vindo(a) de volta!</div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="bg-white border border-gray-200 rounded-xl shadow px-3 py-2 flex items-center gap-2">
+            <input v-model="rangeStart" type="date" class="text-sm border border-gray-200 rounded-lg px-2 py-1">
+            <span class="text-gray-400 text-sm">—</span>
+            <input v-model="rangeEnd" type="date" class="text-sm border border-gray-200 rounded-lg px-2 py-1">
+            <button type="button" class="ml-1 text-sm font-semibold text-blue-700 hover:text-blue-800" @click="applyRange">Aplicar</button>
+          </div>
+          <button type="button" class="bg-white border border-gray-200 rounded-xl shadow px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50">
+            Exportar Relatório
+          </button>
+        </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
-        <KpiCard title="Imóveis Ativos" :value="formatNumber(kpis.properties_active)" icon="home" accent="text-blue-900" />
-        <KpiCard title="Imóveis em Destaque" :value="formatNumber(kpis.properties_featured)" icon="star" accent="text-indigo-700" />
-        <KpiCard title="Leads Captados" :value="formatNumber(kpis.leads_total)" icon="users" accent="text-emerald-700" />
-        <KpiCard title="Leads Hoje" :value="formatNumber(kpis.leads_today)" icon="bolt" accent="text-emerald-700" />
-        <KpiCard title="Visualizações dos Imóveis" :value="formatNumber(kpis.property_views_total)" icon="eye" accent="text-purple-700" />
-        <KpiCard title="Contatos Recebidos" :value="formatNumber(kpis.contacts_total)" icon="mail" accent="text-orange-600" />
+        <KpiCard
+          title="Imóveis Ativos"
+          :value="formatNumber(kpis.properties_active)"
+          subtitle="Total de imóveis publicados"
+          :delta="kpis.properties_active_delta"
+          icon="home"
+          accent="text-blue-900"
+        />
+        <KpiCard
+          title="Imóveis em Destaque"
+          :value="formatNumber(kpis.properties_featured)"
+          subtitle="Total de imóveis em destaque"
+          :delta="kpis.properties_featured_delta"
+          icon="star"
+          accent="text-indigo-700"
+        />
+        <KpiCard
+          title="Leads Captados"
+          :value="formatNumber(kpis.leads_total)"
+          subtitle="Total de leads recebidos"
+          :delta="kpis.leads_total_delta"
+          icon="users"
+          accent="text-emerald-700"
+        />
+        <KpiCard
+          title="Leads Hoje"
+          :value="formatNumber(kpis.leads_today)"
+          subtitle="Leads recebidos hoje"
+          :delta="null"
+          icon="bolt"
+          accent="text-emerald-700"
+        />
+        <KpiCard
+          title="Visualizações dos Imóveis"
+          :value="formatNumber(kpis.property_views_total)"
+          subtitle="Total de visualizações"
+          :delta="kpis.property_views_total_delta"
+          icon="eye"
+          accent="text-purple-700"
+        />
+        <KpiCard
+          title="Contatos Recebidos"
+          :value="formatNumber(kpis.contacts_total)"
+          subtitle="Total de contatos via formulários"
+          :delta="kpis.contacts_total_delta"
+          icon="mail"
+          accent="text-orange-600"
+        />
+        <KpiCard
+          title="Valor em Imóveis"
+          :value="formatCurrency(kpis.properties_value_total)"
+          subtitle="Valor total dos imóveis ativos"
+          :delta="kpis.properties_value_total_delta"
+          icon="cash"
+          accent="text-pink-700"
+        />
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        <SmallCard title="Venda" :value="formatNumber(propertyStatus.sale)" />
-        <SmallCard title="Aluguel" :value="formatNumber(propertyStatus.rent)" />
-        <SmallCard title="Temporada" :value="formatNumber(propertyStatus.season)" />
-        <SmallCard title="Imóveis Exclusivos" :value="formatNumber(propertyStatus.exclusive)" />
-        <SmallCard title="Imóveis Off Market" :value="formatNumber(propertyStatus.off_market)" />
-        <SmallCard title="Imóveis Inativos" :value="formatNumber(propertyStatus.inactive)" />
+        <SmallCard title="Venda" :value="formatNumber(propertyStatus.sale)" :delta="propertyStatus.sale_delta" />
+        <SmallCard title="Aluguel" :value="formatNumber(propertyStatus.rent)" :delta="propertyStatus.rent_delta" />
+        <SmallCard title="Temporada" :value="formatNumber(propertyStatus.season)" :delta="propertyStatus.season_delta" />
+        <SmallCard title="Exclusivos" :value="formatNumber(propertyStatus.exclusive)" :delta="propertyStatus.exclusive_delta" />
+        <SmallCard title="Off Market" :value="formatNumber(propertyStatus.off_market)" :delta="propertyStatus.off_market_delta" />
+        <SmallCard title="Inativos" :value="formatNumber(propertyStatus.inactive)" :delta="propertyStatus.inactive_delta" />
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -216,11 +276,12 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import { usePage } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
+import { router, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
 
 const props = defineProps({
+  range: { type: Object, default: () => ({ start: '', end: '' }) },
   kpis: { type: Object, default: () => ({}) },
   propertyStatus: { type: Object, default: () => ({}) },
   trend: { type: Object, default: () => ({ labels: [], leads: [], views: [] }) },
@@ -238,9 +299,29 @@ const props = defineProps({
 const page = usePage();
 const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 
+const rangeStart = ref(props.range?.start || '');
+const rangeEnd = ref(props.range?.end || '');
+
+watch(
+  () => props.range,
+  (v) => {
+    rangeStart.value = v?.start || '';
+    rangeEnd.value = v?.end || '';
+  }
+);
+
+function applyRange() {
+  router.get(`${adminBase.value}`, { start: rangeStart.value, end: rangeEnd.value }, { preserveState: true, preserveScroll: true });
+}
+
 function formatNumber(value) {
   const n = Number(value || 0);
   return n.toLocaleString('pt-BR');
+}
+
+function formatCurrency(value) {
+  const n = Number(value || 0);
+  return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
 function formatDateTime(value) {
@@ -253,8 +334,27 @@ const KpiCard = {
   props: {
     title: { type: String, required: true },
     value: { type: String, required: true },
+    subtitle: { type: String, default: '' },
+    delta: { type: Number, default: null },
     icon: { type: String, default: '' },
     accent: { type: String, default: 'text-gray-900' },
+  },
+  methods: {
+    deltaText() {
+      if (this.delta === null || this.delta === undefined) return null;
+      const v = Number(this.delta);
+      if (Number.isNaN(v)) return null;
+      const sign = v > 0 ? '+' : '';
+      return `${sign}${v.toFixed(1)}%`;
+    },
+    deltaClass() {
+      if (this.delta === null || this.delta === undefined) return 'text-gray-400';
+      const v = Number(this.delta);
+      if (Number.isNaN(v)) return 'text-gray-400';
+      if (v > 0) return 'text-emerald-600';
+      if (v < 0) return 'text-red-600';
+      return 'text-gray-500';
+    },
   },
   template: `
     <div class="bg-white rounded-xl shadow border border-gray-200 p-5">
@@ -262,6 +362,12 @@ const KpiCard = {
         <div>
           <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide">{{ title }}</div>
           <div class="text-3xl font-extrabold mt-2" :class="accent">{{ value }}</div>
+          <div v-if="subtitle" class="text-sm text-gray-600 mt-1">{{ subtitle }}</div>
+          <div class="flex items-center gap-2 mt-3 text-xs">
+            <div v-if="deltaText()" class="font-bold" :class="deltaClass()">{{ deltaText() }}</div>
+            <div v-else class="font-bold text-gray-400">—</div>
+            <div class="text-gray-500">vs. período anterior</div>
+          </div>
         </div>
         <div class="w-11 h-11 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-700">
           <svg v-if="icon === 'home'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9v9a2 2 0 01-2 2h-4a2 2 0 01-2-2V12H9v7a2 2 0 01-2 2H3v-9z"/></svg>
@@ -270,6 +376,7 @@ const KpiCard = {
           <svg v-else-if="icon === 'bolt'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           <svg v-else-if="icon === 'eye'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           <svg v-else-if="icon === 'mail'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l9 6 9-6M4 6h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg>
+          <svg v-else-if="icon === 'cash'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2m4-4H9m12 0l-3-3m3 3l-3 3"/></svg>
         </div>
       </div>
     </div>
@@ -280,25 +387,34 @@ const SmallCard = {
   props: {
     title: { type: String, required: true },
     value: { type: String, required: true },
+    delta: { type: Number, default: null },
+  },
+  methods: {
+    deltaText() {
+      if (this.delta === null || this.delta === undefined) return null;
+      const v = Number(this.delta);
+      if (Number.isNaN(v)) return null;
+      const sign = v > 0 ? '+' : '';
+      return `${sign}${v.toFixed(1)}%`;
+    },
+    deltaClass() {
+      if (this.delta === null || this.delta === undefined) return 'text-gray-400';
+      const v = Number(this.delta);
+      if (Number.isNaN(v)) return 'text-gray-400';
+      if (v > 0) return 'text-emerald-600';
+      if (v < 0) return 'text-red-600';
+      return 'text-gray-500';
+    },
   },
   template: `
     <div class="bg-white rounded-xl shadow border border-gray-200 p-4">
       <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide">{{ title }}</div>
       <div class="text-2xl font-extrabold text-gray-900 mt-2">{{ value }}</div>
-    </div>
-  `,
-};
-
-const CompactKpi = {
-  props: {
-    title: { type: String, required: true },
-    value: { type: String, required: true },
-    accent: { type: String, default: 'text-gray-900' },
-  },
-  template: `
-    <div class="bg-white rounded-xl shadow border border-gray-200 p-5">
-      <div class="text-3xl font-extrabold" :class="accent">{{ value }}</div>
-      <div class="text-gray-600 text-sm font-semibold mt-1">{{ title }}</div>
+      <div class="mt-2 text-xs flex items-center gap-2">
+        <div v-if="deltaText()" class="font-bold" :class="deltaClass()">{{ deltaText() }}</div>
+        <div v-else class="font-bold text-gray-400">—</div>
+        <div class="text-gray-500">vs. período anterior</div>
+      </div>
     </div>
   `,
 };
