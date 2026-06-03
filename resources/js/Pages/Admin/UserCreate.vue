@@ -36,18 +36,14 @@
 
         <div class="md:col-span-2">
           <label class="block text-gray-700 mb-2 text-sm font-medium">Abas do painel (acessos)</label>
-          <select
-            v-model="form.permissions"
-            multiple
-            class="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white"
-            :disabled="isAdminSelected"
-            size="9"
-          >
-            <option v-for="opt in permissionOptions" :key="opt.key" :value="opt.key">
-              {{ opt.label }}
-            </option>
-          </select>
-          <div class="text-xs text-gray-500 mt-2">Para selecionar mais de uma opção, use Ctrl + Clique.</div>
+          <div class="border border-gray-300 rounded-lg p-4 bg-white">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label v-for="opt in permissionOptions" :key="opt.key" class="flex items-center gap-3">
+                <input v-model="form.permissions" type="checkbox" :value="opt.key" class="h-4 w-4" :disabled="isAdminSelected" />
+                <span class="text-sm text-gray-800">{{ opt.label }}</span>
+              </label>
+            </div>
+          </div>
           <div v-if="isAdminSelected" class="text-xs text-gray-500 mt-2">Administrador sempre tem acesso total.</div>
           <div v-if="form.errors.permissions" class="text-sm text-red-600 mt-1">{{ form.errors.permissions }}</div>
           <div v-if="form.errors['permissions.0']" class="text-sm text-red-600 mt-1">{{ form.errors['permissions.0'] }}</div>
