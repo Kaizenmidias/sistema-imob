@@ -1,5 +1,5 @@
 <template>
-  <header class="site-bg-primary text-white sticky top-0 z-40 shadow-md">
+  <header class="fixed top-0 left-0 right-0 z-50 text-white transition-colors duration-300" :class="headerBgClass">
     <div class="container mx-auto px-4">
       <div class="flex items-center justify-between h-20">
         <!-- Logo -->
@@ -53,16 +53,34 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import DrawerMenu from './DrawerMenu.vue';
 
 const isMenuOpen = ref(false);
+const isScrolled = ref(false);
 
 const page = usePage();
 const menuItems = computed(() => page.props.menuItems || []);
 const settings = computed(() => page.props.settings || {});
 const logoUrl = computed(() => settings.value.logo_url || '');
+
+const headerBgClass = computed(() => {
+  return isScrolled.value ? 'bg-black shadow-md' : 'bg-transparent';
+});
+
+const onScroll = () => {
+  isScrolled.value = (window.scrollY || 0) > 10;
+};
+
+onMounted(() => {
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', onScroll);
+});
 
 function openMenu() {
   isMenuOpen.value = true;
