@@ -1,7 +1,7 @@
 <template>
   <Layout>
     <!-- Hero Section -->
-    <section class="relative text-white min-h-screen -mt-20" :style="{ background: 'linear-gradient(to right, var(--site-primary), var(--site-secondary))' }">
+    <section class="relative text-white min-h-[100vh] min-h-[100svh] -mt-20" :style="{ background: 'linear-gradient(to right, var(--site-primary), var(--site-secondary))' }">
       <div class="absolute inset-0">
         <img :src="homeHeroImage" alt="Imóvel" class="w-full h-full object-cover opacity-20" />
         <div class="absolute inset-0" :style="{ backgroundColor: homeHeroOverlayColor, opacity: homeHeroOverlayOpacity }"></div>
