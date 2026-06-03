@@ -165,10 +165,11 @@ class AdminController extends Controller
             'inactive' => Property::query()->where('ativo', false)->count(),
         ];
 
+        $ymExpr = $this->yearMonthExpression('created_at');
         $leadsByMonth = Lead::query()
-            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as ym, COUNT(*) as c")
+            ->selectRaw($ymExpr . " as ym, COUNT(*) as c")
             ->where('created_at', '>=', $monthStart)
-            ->groupBy('ym')
+            ->groupByRaw($ymExpr)
             ->pluck('c', 'ym');
 
         $viewsByMonth = $this->safeCountsByMonth('property_views', $monthStart);
@@ -247,16 +248,29 @@ class AdminController extends Controller
     private function safeCountsByMonth(string $table, Carbon $from): array
     {
         try {
+            $ymExpr = $this->yearMonthExpression('created_at');
             return DB::table($table)
-                ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as ym, COUNT(*) as c")
+                ->selectRaw($ymExpr . " as ym, COUNT(*) as c")
                 ->where('created_at', '>=', $from)
-                ->groupBy('ym')
+                ->groupByRaw($ymExpr)
                 ->pluck('c', 'ym')
                 ->map(fn ($v) => (int) $v)
                 ->all();
         } catch (\Throwable) {
             return [];
         }
+    }
+
+    private function yearMonthExpression(string $column): string
+    {
+        $driver = DB::connection()->getDriverName();
+
+        return match ($driver) {
+            'sqlite' => "strftime('%Y-%m', {$column})",
+            'pgsql' => "to_char({$column}, 'YYYY-MM')",
+            'sqlsrv' => "FORMAT({$column}, 'yyyy-MM')",
+            default => "DATE_FORMAT({$column}, '%Y-%m')",
+        };
     }
 
     private function formatMonthLabelPtBr(Carbon $date): string
