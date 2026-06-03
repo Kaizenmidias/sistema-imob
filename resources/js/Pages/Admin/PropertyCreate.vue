@@ -91,6 +91,22 @@
             <input type="number" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="0">
           </div>
 
+          <div>
+            <label class="block text-gray-700 mb-2 text-sm font-medium">Flags</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input v-model="form.is_exclusive" type="checkbox" class="rounded border-gray-300">
+                Exclusivo
+              </label>
+              <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input v-model="form.is_off_market" type="checkbox" class="rounded border-gray-300">
+                Off Market
+              </label>
+            </div>
+            <div v-if="form.errors.is_exclusive" class="text-sm text-red-600 mt-1">{{ form.errors.is_exclusive }}</div>
+            <div v-if="form.errors.is_off_market" class="text-sm text-red-600 mt-1">{{ form.errors.is_off_market }}</div>
+          </div>
+
           <div v-if="specialCategories.length > 0">
             <label class="block text-gray-700 mb-2 text-sm font-medium">Categorias Especiais</label>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -176,6 +192,22 @@
             <textarea v-model="form.descricao" rows="8" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="Descrição do imóvel..."></textarea>
             <div v-if="form.errors.descricao" class="text-sm text-red-600 mt-1">{{ form.errors.descricao }}</div>
           </div>
+
+          <div>
+            <label class="block text-gray-700 mb-2 text-sm font-medium">SEO</label>
+            <div class="space-y-4">
+              <div>
+                <div class="text-sm text-gray-700 font-medium mb-2">Meta Title</div>
+                <input v-model="form.meta_title" type="text" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="Título SEO (opcional)">
+                <div v-if="form.errors.meta_title" class="text-sm text-red-600 mt-1">{{ form.errors.meta_title }}</div>
+              </div>
+              <div>
+                <div class="text-sm text-gray-700 font-medium mb-2">Meta Description</div>
+                <textarea v-model="form.meta_description" rows="4" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="Descrição SEO (opcional)"></textarea>
+                <div v-if="form.errors.meta_description" class="text-sm text-red-600 mt-1">{{ form.errors.meta_description }}</div>
+              </div>
+            </div>
+          </div>
         </div>
         
         <div class="lg:col-span-2">
@@ -236,6 +268,8 @@ const formatCurrencyNumberBRL = (value) => {
 const form = useForm({
   titulo: props.property?.titulo || '',
   codigo_referencia: props.property?.codigo_referencia || (isEdit.value ? '' : props.generatedReferenceCode),
+  meta_title: props.property?.meta_title || '',
+  meta_description: props.property?.meta_description || '',
   descricao: props.property?.descricao || '',
   tipo_propriedade_id: props.property?.tipo_propriedade_id ?? defaultPropertyTypeId.value,
   business_type_id: props.property?.business_type_id ?? defaultBusinessTypeId.value,
@@ -247,6 +281,8 @@ const form = useForm({
   quartos: props.property?.quartos ?? null,
   banheiros: props.property?.banheiros ?? null,
   garagens: props.property?.garagens ?? null,
+  is_exclusive: !!props.property?.is_exclusive,
+  is_off_market: !!props.property?.is_off_market,
   show_in_home_selecao_especial: !!props.property?.show_in_home_selecao_especial,
   show_in_home_mais_procurados: !!props.property?.show_in_home_mais_procurados,
   show_in_home_visto_recentemente: !!props.property?.show_in_home_visto_recentemente,

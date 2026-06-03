@@ -12,6 +12,7 @@ use App\Models\SpecialCategory;
 use App\Models\Setting;
 use App\Models\Page;
 use App\Models\Lead;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Redirect;
@@ -326,6 +327,11 @@ class HomeController extends Controller
     {
         $settings = Setting::query()->pluck('valor', 'chave');
 
+        Setting::updateOrCreate(
+            ['chave' => 'feed_imoveis_last_generated_at'],
+            ['valor' => now()->toISOString()]
+        );
+
         $properties = Property::query()
             ->with(['photos', 'businessType', 'propertyType'])
             ->where('ativo', true)
@@ -508,12 +514,33 @@ class HomeController extends Controller
         return Redirect::back();
     }
 
-    public function showProperty(string $slug): Response
+    public function showProperty(Request $request, string $slug): Response
     {
         $propertyModel = Property::with(['propertyType', 'businessType', 'photos'])
             ->where('slug', $slug)
             ->where('ativo', true)
             ->firstOrFail();
+
+        $sessionId = (string) $request->session()->getId();
+        if ($sessionId !== '') {
+            try {
+                $recent = DB::table('property_views')
+                    ->where('property_id', $propertyModel->id)
+                    ->where('session_id', $sessionId)
+                    ->where('created_at', '>=', now()->subMinutes(30))
+                    ->exists();
+
+                if (!$recent) {
+                    DB::table('property_views')->insert([
+                        'property_id' => $propertyModel->id,
+                        'session_id' => $sessionId,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            } catch (\Throwable) {
+            }
+        }
 
         $photos = $propertyModel->photos
             ->sortBy('ordem')

@@ -17,6 +17,8 @@ class Property extends Model
         'codigo_referencia',
         'titulo',
         'slug',
+        'meta_title',
+        'meta_description',
         'descricao',
         'tipo_propriedade_id',
         'operacao',
@@ -42,6 +44,8 @@ class Property extends Model
         'condominio',
         'iptu',
         'destaque',
+        'is_exclusive',
+        'is_off_market',
         'show_in_home_selecao_especial',
         'show_in_home_mais_procurados',
         'show_in_home_visto_recentemente',
@@ -49,6 +53,19 @@ class Property extends Model
         'data_modificacao_xml',
         'business_type_id',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'destaque' => 'boolean',
+            'ativo' => 'boolean',
+            'is_exclusive' => 'boolean',
+            'is_off_market' => 'boolean',
+            'show_in_home_selecao_especial' => 'boolean',
+            'show_in_home_mais_procurados' => 'boolean',
+            'show_in_home_visto_recentemente' => 'boolean',
+        ];
+    }
 
     public function businessType(): BelongsTo
     {

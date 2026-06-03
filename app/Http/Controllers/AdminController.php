@@ -23,6 +23,8 @@ use App\Models\Setting;
 use App\Models\Page;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
@@ -133,13 +135,437 @@ class AdminController extends Controller
 
     public function index(): Response
     {
-        $properties = Property::count();
-        $leads = Lead::count();
-        
+        $now = now();
+        $monthStart = $now->copy()->startOfMonth()->subMonths(11);
+
+        $monthLabels = [];
+        $monthKeys = [];
+        $monthCursor = $monthStart->copy();
+        for ($i = 0; $i < 12; $i++) {
+            $monthKeys[] = $monthCursor->format('Y-m');
+            $monthLabels[] = $this->formatMonthLabelPtBr($monthCursor);
+            $monthCursor->addMonth();
+        }
+
+        $kpis = [
+            'properties_active' => Property::query()->where('ativo', true)->count(),
+            'properties_featured' => Property::query()->where('ativo', true)->where('destaque', true)->count(),
+            'leads_total' => Lead::query()->count(),
+            'leads_today' => Lead::query()->whereDate('created_at', $now->toDateString())->count(),
+            'property_views_total' => $this->safeCountTable('property_views'),
+            'contacts_total' => Lead::query()->where('origem', 'Site - Contato')->count(),
+        ];
+
+        $propertyStatus = [
+            'sale' => Property::query()->where('ativo', true)->where('operacao', 'Venda')->count(),
+            'rent' => Property::query()->where('ativo', true)->where('operacao', 'Aluguel')->count(),
+            'season' => Property::query()->where('ativo', true)->where('operacao', 'Temporada')->count(),
+            'exclusive' => Property::query()->where('ativo', true)->where('is_exclusive', true)->count(),
+            'off_market' => Property::query()->where('ativo', true)->where('is_off_market', true)->count(),
+            'inactive' => Property::query()->where('ativo', false)->count(),
+        ];
+
+        $leadsByMonth = Lead::query()
+            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as ym, COUNT(*) as c")
+            ->where('created_at', '>=', $monthStart)
+            ->groupBy('ym')
+            ->pluck('c', 'ym');
+
+        $viewsByMonth = $this->safeCountsByMonth('property_views', $monthStart);
+
+        $trend = [
+            'labels' => $monthLabels,
+            'leads' => array_map(fn ($k) => (int) ($leadsByMonth[$k] ?? 0), $monthKeys),
+            'views' => array_map(fn ($k) => (int) ($viewsByMonth[$k] ?? 0), $monthKeys),
+        ];
+
+        $leadOriginItems = [
+            ['key' => 'property_form', 'label' => 'Formulário do imóvel', 'count' => Lead::query()->where('origem', 'Site - Interesse no Imóvel')->count()],
+            ['key' => 'contact', 'label' => 'Página de contato', 'count' => Lead::query()->where('origem', 'Site - Contato')->count()],
+            ['key' => 'evaluate', 'label' => 'Avaliação de imóvel', 'count' => Lead::query()->where('origem', 'Site - Avalie seu Imóvel')->count()],
+            ['key' => 'whatsapp', 'label' => 'WhatsApp', 'count' => Lead::query()->where('origem', 'like', '%WhatsApp%')->count()],
+            ['key' => 'partner_agent', 'label' => 'Corretor parceiro', 'count' => Lead::query()->where('origem', 'Site - Corretor Parceiro')->count()],
+            ['key' => 'off_market', 'label' => 'Off Market', 'count' => Lead::query()->where('origem', 'Site - Off Market')->count()],
+        ];
+
+        $seo = [
+            'missing_meta_title' => Property::query()
+                ->where('ativo', true)
+                ->where(fn ($q) => $q->whereNull('meta_title')->orWhere('meta_title', ''))
+                ->count(),
+            'missing_meta_description' => Property::query()
+                ->where('ativo', true)
+                ->where(fn ($q) => $q->whereNull('meta_description')->orWhere('meta_description', ''))
+                ->count(),
+            'missing_images' => Property::query()->where('ativo', true)->doesntHave('photos')->count(),
+            'missing_location' => Property::query()
+                ->where('ativo', true)
+                ->where(function ($q) {
+                    $q
+                        ->whereNull('endereco')->orWhere('endereco', '')
+                        ->orWhereNull('bairro')->orWhere('bairro', '')
+                        ->orWhereNull('cidade')->orWhere('cidade', '')
+                        ->orWhereNull('estado')->orWhere('estado', '');
+                })
+                ->count(),
+            'missing_slug_optimized' => $this->countUnoptimizedPropertySlugs(),
+        ];
+
+        $topProperties = $this->topViewedProperties();
+        $recentLeads = $this->recentLeads();
+        $recentProperties = $this->recentProperties();
+        $activities = $this->recentActivities();
+        $blogStats = $this->blogStats();
+        $integrations = $this->integrationStatus();
+        $alerts = $this->buildAlerts($seo);
+
         return Inertia::render('Admin/Dashboard', [
-            'propertiesCount' => $properties,
-            'leadsCount' => $leads,
+            'kpis' => $kpis,
+            'propertyStatus' => $propertyStatus,
+            'trend' => $trend,
+            'leadOrigins' => $leadOriginItems,
+            'seo' => $seo,
+            'topProperties' => $topProperties,
+            'recentLeads' => $recentLeads,
+            'recentProperties' => $recentProperties,
+            'activities' => $activities,
+            'blogStats' => $blogStats,
+            'integrations' => $integrations,
+            'alerts' => $alerts,
         ]);
+    }
+
+    private function safeCountTable(string $table): int
+    {
+        try {
+            return (int) DB::table($table)->count();
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    private function safeCountsByMonth(string $table, Carbon $from): array
+    {
+        try {
+            return DB::table($table)
+                ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as ym, COUNT(*) as c")
+                ->where('created_at', '>=', $from)
+                ->groupBy('ym')
+                ->pluck('c', 'ym')
+                ->map(fn ($v) => (int) $v)
+                ->all();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    private function formatMonthLabelPtBr(Carbon $date): string
+    {
+        $map = [
+            1 => 'Jan',
+            2 => 'Fev',
+            3 => 'Mar',
+            4 => 'Abr',
+            5 => 'Mai',
+            6 => 'Jun',
+            7 => 'Jul',
+            8 => 'Ago',
+            9 => 'Set',
+            10 => 'Out',
+            11 => 'Nov',
+            12 => 'Dez',
+        ];
+
+        $m = (int) $date->month;
+        return ($map[$m] ?? $date->format('M')) . '/' . $date->format('y');
+    }
+
+    private function countUnoptimizedPropertySlugs(): int
+    {
+        $items = Property::query()
+            ->where('ativo', true)
+            ->get(['id', 'slug']);
+
+        return $items
+            ->filter(function (Property $p) {
+                $slug = trim((string) $p->slug);
+                if ($slug === '') return true;
+                if (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug)) return true;
+                if (str_contains($slug, '--')) return true;
+                if (str_starts_with($slug, '-') || str_ends_with($slug, '-')) return true;
+                return false;
+            })
+            ->count();
+    }
+
+    private function topViewedProperties(): array
+    {
+        try {
+            $viewsSub = DB::table('property_views')
+                ->select('property_id', DB::raw('COUNT(*) as views_count'))
+                ->groupBy('property_id');
+
+            $items = Property::query()
+                ->where('ativo', true)
+                ->with(['photos'])
+                ->withCount(['leads'])
+                ->leftJoinSub($viewsSub, 'pv', fn ($join) => $join->on('properties.id', '=', 'pv.property_id'))
+                ->orderByDesc(DB::raw('COALESCE(pv.views_count, 0)'))
+                ->limit(10)
+                ->get([
+                    'properties.id',
+                    'properties.titulo',
+                    'properties.cidade',
+                    'properties.estado',
+                    DB::raw('COALESCE(pv.views_count, 0) as views_count'),
+                ]);
+        } catch (\Throwable) {
+            $items = Property::query()
+                ->where('ativo', true)
+                ->with(['photos'])
+                ->withCount(['leads'])
+                ->orderByDesc('created_at')
+                ->limit(10)
+                ->get([
+                    'id',
+                    'titulo',
+                    'cidade',
+                    'estado',
+                ])
+                ->map(function (Property $p) {
+                    $p->views_count = 0;
+                    return $p;
+                });
+        }
+
+        return $items
+            ->map(function (Property $p) {
+                $photos = $p->relationLoaded('photos') ? $p->photos->sortBy('ordem') : collect();
+                $photo = $photos->firstWhere('principal', true) ?? $photos->first();
+                $photoUrl = $photo?->url ?: null;
+
+                return [
+                    'id' => $p->id,
+                    'title' => $p->titulo,
+                    'city' => trim(($p->cidade ?? '') . '/' . ($p->estado ?? '')),
+                    'views' => (int) ($p->views_count ?? 0),
+                    'leads' => (int) ($p->leads_count ?? 0),
+                    'photo_url' => $photoUrl,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function recentLeads(): array
+    {
+        return Lead::query()
+            ->with(['property:id,titulo'])
+            ->orderByDesc('created_at')
+            ->limit(8)
+            ->get(['id', 'property_id', 'nome', 'telefone', 'status', 'created_at'])
+            ->map(fn (Lead $l) => [
+                'id' => $l->id,
+                'name' => $l->nome,
+                'phone' => $l->telefone,
+                'property' => $l->property ? $l->property->titulo : null,
+                'created_at' => $l->created_at?->toISOString(),
+                'status' => $l->status,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function recentProperties(): array
+    {
+        return Property::query()
+            ->with(['photos', 'businessType:id,name'])
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get(['id', 'titulo', 'cidade', 'estado', 'business_type_id', 'created_at'])
+            ->map(function (Property $p) {
+                $photos = $p->relationLoaded('photos') ? $p->photos->sortBy('ordem') : collect();
+                $photo = $photos->firstWhere('principal', true) ?? $photos->first();
+                $photoUrl = $photo?->url ?: null;
+
+                return [
+                    'id' => $p->id,
+                    'title' => $p->titulo,
+                    'city' => trim(($p->cidade ?? '') . '/' . ($p->estado ?? '')),
+                    'type' => $p->businessType?->name ?? null,
+                    'created_at' => $p->created_at?->toISOString(),
+                    'photo_url' => $photoUrl,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function recentActivities(): array
+    {
+        $items = [];
+
+        $leads = Lead::query()->orderByDesc('created_at')->limit(6)->get(['id', 'nome', 'origem', 'created_at']);
+        foreach ($leads as $l) {
+            $items[] = [
+                'type' => 'lead',
+                'title' => 'Lead recebido',
+                'description' => trim(($l->nome ?? '') . ' • ' . ($l->origem ?? '')),
+                'at' => $l->created_at?->toISOString(),
+            ];
+        }
+
+        $propertiesNew = Property::query()->orderByDesc('created_at')->limit(6)->get(['id', 'titulo', 'created_at']);
+        foreach ($propertiesNew as $p) {
+            $items[] = [
+                'type' => 'property',
+                'title' => 'Novo imóvel cadastrado',
+                'description' => $p->titulo,
+                'at' => $p->created_at?->toISOString(),
+            ];
+        }
+
+        $propertiesUpdated = Property::query()
+            ->where('updated_at', '>=', now()->subDays(30))
+            ->orderByDesc('updated_at')
+            ->limit(6)
+            ->get(['id', 'titulo', 'created_at', 'updated_at']);
+        foreach ($propertiesUpdated as $p) {
+            if ($p->updated_at && $p->created_at && $p->updated_at->diffInMinutes($p->created_at) < 2) {
+                continue;
+            }
+            $items[] = [
+                'type' => 'property',
+                'title' => 'Imóvel atualizado',
+                'description' => $p->titulo,
+                'at' => $p->updated_at?->toISOString(),
+            ];
+        }
+
+        $pages = Page::query()->where('ativo', true)->orderByDesc('updated_at')->limit(4)->get(['id', 'titulo', 'updated_at']);
+        foreach ($pages as $p) {
+            $items[] = [
+                'type' => 'page',
+                'title' => 'Página publicada/atualizada',
+                'description' => $p->titulo,
+                'at' => $p->updated_at?->toISOString(),
+            ];
+        }
+
+        $posts = BlogPost::query()->whereNotNull('published_at')->orderByDesc('published_at')->limit(4)->get(['id', 'title', 'published_at']);
+        foreach ($posts as $p) {
+            $items[] = [
+                'type' => 'blog',
+                'title' => 'Artigo publicado',
+                'description' => $p->title,
+                'at' => $p->published_at?->toISOString(),
+            ];
+        }
+
+        return collect($items)
+            ->filter(fn ($i) => !empty($i['at']))
+            ->sortByDesc('at')
+            ->take(12)
+            ->values()
+            ->all();
+    }
+
+    private function blogStats(): ?array
+    {
+        $total = BlogPost::query()->count();
+        if ($total === 0) {
+            return null;
+        }
+
+        $viewsTotal = $this->safeCountTable('blog_post_views');
+
+        $top = null;
+        try {
+            $row = DB::table('blog_post_views')
+                ->select('blog_post_id', DB::raw('COUNT(*) as c'))
+                ->groupBy('blog_post_id')
+                ->orderByDesc('c')
+                ->first();
+
+            if ($row && !empty($row->blog_post_id)) {
+                $post = BlogPost::query()->find($row->blog_post_id);
+                if ($post) {
+                    $top = [
+                        'id' => $post->id,
+                        'title' => $post->title,
+                        'views' => (int) ($row->c ?? 0),
+                    ];
+                }
+            }
+        } catch (\Throwable) {
+            $top = null;
+        }
+
+        return [
+            'total_posts' => $total,
+            'total_views' => $viewsTotal,
+            'top_post' => $top,
+        ];
+    }
+
+    private function integrationStatus(): array
+    {
+        $scripts = Setting::query()
+            ->whereIn('chave', ['script_head', 'script_body_top', 'script_body_bottom'])
+            ->pluck('valor', 'chave');
+
+        $blob = implode("\n", $scripts->all());
+
+        $ga = str_contains($blob, 'googletagmanager.com/gtag/js') || preg_match('/G-[A-Z0-9]{6,}/', $blob);
+        $gtm = str_contains($blob, 'googletagmanager.com/gtm.js') || preg_match('/GTM-[A-Z0-9]+/', $blob);
+        $meta = str_contains($blob, 'connect.facebook.net') || str_contains($blob, 'fbq(');
+        $clarity = str_contains($blob, 'clarity.ms') || str_contains($blob, 'clarity(');
+
+        return [
+            'google_analytics' => (bool) $ga,
+            'google_tag_manager' => (bool) $gtm,
+            'meta_pixel' => (bool) $meta,
+            'microsoft_clarity' => (bool) $clarity,
+        ];
+    }
+
+    private function buildAlerts(array $seo): array
+    {
+        $alerts = [];
+
+        if (!empty($seo['missing_images'])) {
+            $alerts[] = ['level' => 'warning', 'text' => 'Existem imóveis sem fotos.'];
+        }
+        if (!empty($seo['missing_meta_title']) || !empty($seo['missing_meta_description'])) {
+            $alerts[] = ['level' => 'warning', 'text' => 'Existem imóveis sem SEO configurado (Meta Title/Description).'];
+        }
+        if (!empty($seo['missing_location'])) {
+            $alerts[] = ['level' => 'warning', 'text' => 'Existem imóveis sem localização completa (endereço/bairro/cidade/UF).'];
+        }
+
+        $leadsNoResponse = Lead::query()
+            ->where('status', 'Novo Lead')
+            ->where('created_at', '<=', now()->subDay())
+            ->count();
+        if ($leadsNoResponse > 0) {
+            $alerts[] = ['level' => 'info', 'text' => 'Existem leads sem resposta.'];
+        }
+
+        $feedLast = Setting::query()->where('chave', 'feed_imoveis_last_generated_at')->value('valor');
+        $feedOutdated = true;
+        try {
+            if (!empty($feedLast)) {
+                $dt = Carbon::parse((string) $feedLast);
+                $feedOutdated = $dt->lt(now()->subDays(7));
+            }
+        } catch (\Throwable) {
+            $feedOutdated = true;
+        }
+        if ($feedOutdated) {
+            $alerts[] = ['level' => 'info', 'text' => 'Feed/Sitemap de imóveis pode precisar de atualização.'];
+        }
+
+        return $alerts;
     }
     
     public function properties(Request $request): Response
@@ -202,6 +628,8 @@ class AdminController extends Controller
         $validated = $request->validate([
             'titulo' => ['required', 'string', 'max:255'],
             'codigo_referencia' => ['nullable', 'string', 'max:255'],
+            'meta_title' => ['nullable', 'string', 'max:255'],
+            'meta_description' => ['nullable', 'string'],
             'descricao' => ['required', 'string'],
             'tipo_propriedade_id' => ['required', 'integer', 'exists:property_types,id'],
             'business_type_id' => ['required', 'integer', 'exists:business_types,id'],
@@ -213,6 +641,8 @@ class AdminController extends Controller
             'quartos' => ['nullable', 'integer', 'min:0'],
             'banheiros' => ['nullable', 'integer', 'min:0'],
             'garagens' => ['nullable', 'integer', 'min:0'],
+            'is_exclusive' => ['nullable', 'boolean'],
+            'is_off_market' => ['nullable', 'boolean'],
             'show_in_home_selecao_especial' => ['nullable', 'boolean'],
             'show_in_home_mais_procurados' => ['nullable', 'boolean'],
             'show_in_home_visto_recentemente' => ['nullable', 'boolean'],
@@ -307,6 +737,8 @@ class AdminController extends Controller
         $validated = $request->validate([
             'titulo' => ['required', 'string', 'max:255'],
             'codigo_referencia' => ['nullable', 'string', 'max:255'],
+            'meta_title' => ['nullable', 'string', 'max:255'],
+            'meta_description' => ['nullable', 'string'],
             'descricao' => ['required', 'string'],
             'tipo_propriedade_id' => ['required', 'integer', 'exists:property_types,id'],
             'business_type_id' => ['required', 'integer', 'exists:business_types,id'],
@@ -318,6 +750,8 @@ class AdminController extends Controller
             'quartos' => ['nullable', 'integer', 'min:0'],
             'banheiros' => ['nullable', 'integer', 'min:0'],
             'garagens' => ['nullable', 'integer', 'min:0'],
+            'is_exclusive' => ['nullable', 'boolean'],
+            'is_off_market' => ['nullable', 'boolean'],
             'show_in_home_selecao_especial' => ['nullable', 'boolean'],
             'show_in_home_mais_procurados' => ['nullable', 'boolean'],
             'show_in_home_visto_recentemente' => ['nullable', 'boolean'],
