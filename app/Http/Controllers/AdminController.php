@@ -148,8 +148,25 @@ class AdminController extends Controller
             $monthCursor->addMonth();
         }
 
-        $rangeStart = Carbon::parse(request('start', $now->copy()->startOfMonth()->toDateString()))->startOfDay();
-        $rangeEnd = Carbon::parse(request('end', $now->copy()->endOfMonth()->toDateString()))->endOfDay();
+        $startRaw = trim((string) request('start', ''));
+        $endRaw = trim((string) request('end', ''));
+
+        try {
+            $rangeStart = $startRaw !== ''
+                ? Carbon::parse($startRaw)->startOfDay()
+                : $now->copy()->startOfMonth()->startOfDay();
+        } catch (\Throwable) {
+            $rangeStart = $now->copy()->startOfMonth()->startOfDay();
+        }
+
+        try {
+            $rangeEnd = $endRaw !== ''
+                ? Carbon::parse($endRaw)->endOfDay()
+                : $now->copy()->endOfMonth()->endOfDay();
+        } catch (\Throwable) {
+            $rangeEnd = $now->copy()->endOfMonth()->endOfDay();
+        }
+
         if ($rangeStart->gt($rangeEnd)) {
             [$rangeStart, $rangeEnd] = [$rangeEnd->copy()->startOfDay(), $rangeStart->copy()->endOfDay()];
         }
