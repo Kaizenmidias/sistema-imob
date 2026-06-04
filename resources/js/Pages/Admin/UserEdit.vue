@@ -173,6 +173,6 @@ watch(
 );
 
 const save = () => {
-  form.post(`${adminBase.value}/users/${user.value.id}`, { method: 'put', preserveScroll: true });
+  form.put(`${adminBase.value}/users/${user.value.id}`, { preserveScroll: true });
 };
 </script>
