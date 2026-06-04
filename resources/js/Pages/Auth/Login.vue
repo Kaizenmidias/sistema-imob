@@ -68,8 +68,7 @@
 
             <button
               type="submit"
-              class="w-full rounded-xl py-3 font-semibold transition text-white"
-              :style="{ backgroundColor: 'var(--site-secondary)' }"
+              class="w-full rounded-xl py-3 font-semibold transition text-white bg-black hover:bg-neutral-900 disabled:opacity-60"
               :disabled="form.processing"
             >
               Entrar
