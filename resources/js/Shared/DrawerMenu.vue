@@ -8,7 +8,10 @@
       isOpen ? 'translate-x-0' : 'translate-x-full'
     ]">
       <div class="flex items-center justify-between h-20 px-4">
-        <div class="text-2xl font-bold">Imobiliária</div>
+        <a href="/" class="flex items-center">
+          <img v-if="logoUrl" :src="logoUrl" :alt="siteName" class="h-10 w-auto object-contain" />
+          <div v-else class="text-2xl font-bold">{{ siteName }}</div>
+        </a>
         <button @click="close" class="p-2 hover:bg-blue-800 rounded-full transition">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -54,7 +57,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 
 const props = defineProps({
   isOpen: Boolean,
@@ -63,6 +67,11 @@ const props = defineProps({
     default: () => [],
   },
 });
+
+const page = usePage();
+const settings = computed(() => page.props.settings || {});
+const siteName = computed(() => settings.value.nome_empresa || 'Imobiliária');
+const logoUrl = computed(() => settings.value.logo_url || '');
 
 const emit = defineEmits(['close']);
 

@@ -122,6 +122,6 @@ const normalizedAdminPath = computed(() => String(form.admin_path || 'admin').re
 const normalizedLoginPath = computed(() => String(form.login_path || 'login').replace(/^\/+|\/+$/g, '') || 'login');
 
 const save = () => {
-  form.post(`${adminBase.value}/settings`, { method: 'put', forceFormData: true });
+  form.put(`${adminBase.value}/settings`, { preserveScroll: true });
 };
 </script>

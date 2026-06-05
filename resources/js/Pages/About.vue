@@ -1,11 +1,11 @@
 <template>
   <Layout>
-    <section class="relative text-white">
+    <section class="relative text-white min-h-[100vh] min-h-[100svh] flex items-center">
       <div class="absolute inset-0">
         <img :src="aboutHeroBg" alt="Quem somos" class="w-full h-full object-cover" />
-        <div class="absolute inset-0" :style="{ backgroundColor: 'var(--site-primary)', opacity: 0.7 }"></div>
+        <div class="absolute inset-0" :style="{ backgroundColor: aboutHeroOverlayColor, opacity: aboutHeroOverlayOpacity }"></div>
       </div>
-      <div class="relative max-w-[1400px] mx-auto px-4 py-24">
+      <div class="relative max-w-[1400px] mx-auto px-4 w-full py-16">
         <div class="max-w-3xl mx-auto text-center">
           <div class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-sm tracking-wide">
             <span class="opacity-90">{{ settings.nome_empresa || 'Imobiliária' }}</span>
@@ -221,6 +221,11 @@ const placeholderImage = `data:image/svg+xml,${encodeURIComponent(
 )}`;
 
 const aboutHeroBg = computed(() => data.value.hero_background_image || placeholderImage);
+const aboutHeroOverlayColor = computed(() => props.page?.banner_overlay_color || 'var(--site-primary)');
+const aboutHeroOverlayOpacity = computed(() => {
+  const raw = Number(props.page?.banner_overlay_opacity ?? 70);
+  return Math.max(0, Math.min(100, raw)) / 100;
+});
 const aboutHeroTitlePrimary = computed(() => data.value.hero_title_primary || 'Conexão patrimonial.');
 const aboutHeroTitleSecondary = computed(() => data.value.hero_title_secondary || 'Valor que permanece.');
 const aboutHeroSubtitle = computed(

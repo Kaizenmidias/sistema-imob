@@ -128,8 +128,7 @@ function reset() {
 }
 
 function save() {
-  form.post(`${adminBase.value}/profile`, {
-    method: 'put',
+  form.put(`${adminBase.value}/profile`, {
     forceFormData: true,
     preserveScroll: true,
     onSuccess: () => {

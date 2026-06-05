@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex flex-col bg-white text-gray-900">
     <Header />
-    <main :class="['flex-grow', isHome ? '' : 'pt-20']">
+    <main :class="['flex-grow', isHeroOverlay ? '' : 'pt-20']">
       <slot />
     </main>
     <Footer />
@@ -151,6 +151,7 @@ import Footer from './Footer.vue';
 
 const page = usePage();
 const isHome = computed(() => page.component === 'Home' || page.url === '/');
+const isHeroOverlay = computed(() => isHome.value || page.component === 'About');
 
 const STORAGE_KEY = 'cookie_consent_v1';
 
