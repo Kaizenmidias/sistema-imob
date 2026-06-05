@@ -3,7 +3,10 @@
     <div class="container mx-auto px-4 py-12">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
         <div>
-          <h3 class="text-xl font-bold mb-4">{{ siteName }}</h3>
+          <a href="/" class="inline-flex items-center mb-4">
+            <img v-if="logoUrl" :src="logoUrl" :alt="siteName" class="h-10 w-auto object-contain" />
+            <h3 v-else class="text-xl font-bold">{{ siteName }}</h3>
+          </a>
           <p class="text-gray-300">{{ slogan }}</p>
         </div>
         <div>
@@ -54,6 +57,7 @@ const page = usePage();
 const settings = computed(() => page.props.settings || {});
 
 const siteName = computed(() => settings.value.nome_empresa || 'Imobiliária');
+const logoUrl = computed(() => settings.value.logo_url || '');
 const slogan = computed(() => settings.value.slogan || 'Seu novo lar está aqui.');
 const telefone = computed(() => settings.value.telefone || '');
 const email = computed(() => settings.value.email_contato || '');
