@@ -1,7 +1,13 @@
 <template>
-  <div class="flex h-screen bg-gray-100">
-    <!-- Sidebar -->
-    <aside class="w-64 bg-black text-white flex flex-col">
+  <div class="min-h-screen bg-gray-100 md:flex">
+    <div v-if="isSidebarOpen" class="fixed inset-0 z-40 bg-black/60 md:hidden" @click="closeSidebar"></div>
+
+    <aside
+      :class="[
+        'fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-black text-white flex flex-col transform transition-transform duration-300 md:static md:z-auto md:w-64 md:max-w-none md:translate-x-0',
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+      ]"
+    >
       <div class="p-6">
         <Link :href="`${adminBase}/profile`" class="flex items-center gap-3 group">
           <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-900 border border-gray-800 flex items-center justify-center">
@@ -17,7 +23,7 @@
         </Link>
       </div>
       
-      <nav class="mt-6 flex-1">
+      <nav class="mt-6 flex-1 overflow-y-auto pb-6">
         <Link v-if="can('dashboard')" :href="adminBase" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
@@ -145,13 +151,19 @@
     </aside>
 
     <!-- Content -->
-    <main class="flex-1 overflow-auto">
-      <header class="bg-white shadow px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-gray-800">
+    <main class="flex-1 min-w-0 flex flex-col">
+      <header class="bg-white shadow px-4 py-3 md:px-6 md:py-4 border-b border-gray-200 flex items-center gap-3">
+        <button type="button" class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition" @click="toggleSidebar">
+          <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+
+        <h1 class="min-w-0 flex-1 text-lg md:text-2xl font-bold text-gray-800 truncate">
           <slot name="pageTitle">Dashboard</slot>
         </h1>
       </header>
-      <div class="p-6">
+      <div class="flex-1 overflow-auto p-4 md:p-6">
         <slot></slot>
       </div>
     </main>
@@ -159,7 +171,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 
 const page = usePage();
@@ -167,6 +179,8 @@ const user = computed(() => page.props?.auth?.user || null);
 const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 const isAdmin = computed(() => user.value?.role === 'admin');
 const permissions = computed(() => (Array.isArray(user.value?.permissions) ? user.value.permissions.map((p) => String(p)) : []));
+
+const isSidebarOpen = ref(false);
 
 const can = (key) => {
   if (isAdmin.value) return true;
@@ -179,4 +193,19 @@ const initials = computed(() => {
   const parts = name.split(/\s+/).filter(Boolean).slice(0, 2);
   return parts.map((p) => p[0]?.toUpperCase()).join('');
 });
+
+const closeSidebar = () => {
+  isSidebarOpen.value = false;
+};
+
+const toggleSidebar = () => {
+  isSidebarOpen.value = !isSidebarOpen.value;
+};
+
+watch(
+  () => page.url,
+  () => {
+    closeSidebar();
+  }
+);
 </script>
