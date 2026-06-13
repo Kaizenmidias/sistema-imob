@@ -1,9 +1,20 @@
 <template>
   <Layout>
+    <section class="relative text-white">
+      <div class="absolute inset-0">
+        <img :src="propertiesBannerImage" alt="Imóveis" class="w-full h-full object-cover" />
+        <div class="absolute inset-0" :style="{ backgroundColor: propertiesBannerOverlayColor, opacity: propertiesBannerOverlayOpacity }"></div>
+      </div>
+      <div class="relative max-w-[1400px] mx-auto px-4 py-16">
+        <h1 class="text-4xl font-bold text-center" :style="{ color: propertiesBannerTitleColor }">{{ propertiesBannerTitle }}</h1>
+        <p v-if="propertiesBannerSubtitle" class="mt-4 text-center max-w-3xl mx-auto" :style="{ color: propertiesBannerSubtitleColor }">{{ propertiesBannerSubtitle }}</p>
+      </div>
+    </section>
+
     <section class="bg-gray-50 py-8">
       <div class="max-w-[1400px] mx-auto px-4">
         <div class="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
-          <aside class="bg-white rounded-2xl shadow border border-gray-100 p-5 h-fit sticky top-6">
+          <aside class="bg-white rounded-2xl shadow border border-gray-100 p-5 lg:h-fit sticky top-24 lg:top-6 z-40 max-h-[calc(100vh-7rem)] overflow-y-auto lg:max-h-none lg:overflow-visible">
             <div class="flex items-center justify-between">
               <div class="inline-flex items-center gap-2 font-semibold text-gray-900">
                 <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -220,7 +231,7 @@
 import { computed, reactive, watch } from 'vue';
 import Layout from '@/Shared/Layout.vue';
 import PropertyCard from '@/Shared/PropertyCard.vue';
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 
 const props = defineProps({
   properties: {
@@ -243,6 +254,33 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+});
+
+const inertiaPage = usePage();
+const settings = computed(() => inertiaPage.props.settings || {});
+
+const placeholderImage = `data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="600" viewBox="0 0 1600 600">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#0f172a"/>
+        <stop offset="1" stop-color="#1e3a8a"/>
+      </linearGradient>
+    </defs>
+    <rect width="1600" height="600" fill="url(#g)"/>
+    <text x="800" y="330" text-anchor="middle" font-family="Arial, sans-serif" font-size="44" fill="rgba(255,255,255,0.35)">Imóveis</text>
+  </svg>`
+)}`;
+
+const propertiesBannerImage = computed(() => settings.value.properties_banner_image_url || placeholderImage);
+const propertiesBannerTitle = computed(() => settings.value.properties_banner_title || 'Imóveis');
+const propertiesBannerSubtitle = computed(() => settings.value.properties_banner_subtitle || '');
+const propertiesBannerTitleColor = computed(() => settings.value.properties_banner_title_color || '#ffffff');
+const propertiesBannerSubtitleColor = computed(() => settings.value.properties_banner_subtitle_color || 'rgba(255,255,255,0.85)');
+const propertiesBannerOverlayColor = computed(() => settings.value.properties_banner_overlay_color || '#0f172a');
+const propertiesBannerOverlayOpacity = computed(() => {
+  const raw = Number(settings.value.properties_banner_overlay_opacity ?? 70);
+  return Math.max(0, Math.min(100, raw)) / 100;
 });
 
 const items = computed(() => props.properties?.data || []);

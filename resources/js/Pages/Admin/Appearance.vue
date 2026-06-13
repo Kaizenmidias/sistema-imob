@@ -111,6 +111,65 @@
           </div>
         </div>
       </div>
+
+      <div class="bg-white rounded-xl shadow p-6 border border-gray-200 lg:col-span-2">
+        <h3 class="text-xl font-semibold text-gray-800 mb-6">Banner da Página de Imóveis</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="space-y-5">
+            <div>
+              <label class="block text-gray-700 mb-2 text-sm font-medium">Título</label>
+              <input v-model="form.properties_banner_title" type="text" class="w-full border border-gray-300 rounded-lg px-4 py-3" />
+            </div>
+            <div>
+              <label class="block text-gray-700 mb-2 text-sm font-medium">Subtítulo</label>
+              <input v-model="form.properties_banner_subtitle" type="text" class="w-full border border-gray-300 rounded-lg px-4 py-3" />
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-end">
+              <div>
+                <label class="block text-gray-700 mb-2 text-sm font-medium">Cor do Título</label>
+                <div class="flex gap-3 items-center">
+                  <input type="color" v-model="form.properties_banner_title_color" class="w-12 h-10 border-2 border-gray-300 rounded cursor-pointer">
+                  <span class="text-gray-700 font-mono text-sm">{{ form.properties_banner_title_color }}</span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-gray-700 mb-2 text-sm font-medium">Cor do Subtítulo</label>
+                <div class="flex gap-3 items-center">
+                  <input type="color" v-model="form.properties_banner_subtitle_color" class="w-12 h-10 border-2 border-gray-300 rounded cursor-pointer">
+                  <span class="text-gray-700 font-mono text-sm">{{ form.properties_banner_subtitle_color }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-end">
+              <div>
+                <label class="block text-gray-700 mb-2 text-sm font-medium">Cor do Overlay</label>
+                <div class="flex gap-3 items-center">
+                  <input type="color" v-model="form.properties_banner_overlay_color" class="w-12 h-10 border-2 border-gray-300 rounded cursor-pointer">
+                  <span class="text-gray-700 font-mono text-sm">{{ form.properties_banner_overlay_color }}</span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-gray-700 mb-2 text-sm font-medium">Opacidade do Overlay (%)</label>
+                <input v-model.number="form.properties_banner_overlay_opacity" type="number" min="0" max="100" class="w-full border border-gray-300 rounded-lg px-4 py-3" />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-gray-700 mb-2 text-sm font-medium">Imagem do Banner</label>
+            <input ref="propertiesBannerInput" type="file" accept="image/*" class="hidden" @change="onPropertiesBannerChange" />
+            <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 transition cursor-pointer" @click="pickPropertiesBanner">
+              <svg class="w-10 h-10 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              <p class="text-gray-600">Clique para enviar imagem do banner</p>
+              <div v-if="propertiesBannerPreviewUrl" class="mt-4 flex items-center justify-center">
+                <img :src="propertiesBannerPreviewUrl" alt="Banner Imóveis" class="h-32 w-full object-cover rounded-lg" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       
       <div class="lg:col-span-2">
         <button @click="save" :disabled="form.processing" class="bg-blue-900 hover:bg-blue-800 disabled:opacity-60 text-white px-8 py-3 rounded-lg font-semibold transition">
@@ -147,12 +206,20 @@ const form = useForm({
   font_size_title: Number(props.settings?.font_size_title ?? 40),
   home_hero_overlay_color: props.settings?.home_hero_overlay_color || '#0f172a',
   home_hero_overlay_opacity: Number(props.settings?.home_hero_overlay_opacity ?? 70),
+  properties_banner_title: props.settings?.properties_banner_title || 'Imóveis',
+  properties_banner_subtitle: props.settings?.properties_banner_subtitle || '',
+  properties_banner_title_color: props.settings?.properties_banner_title_color || '#ffffff',
+  properties_banner_subtitle_color: props.settings?.properties_banner_subtitle_color || '#ffffff',
+  properties_banner_overlay_color: props.settings?.properties_banner_overlay_color || '#0f172a',
+  properties_banner_overlay_opacity: Number(props.settings?.properties_banner_overlay_opacity ?? 70),
+  properties_banner_image_file: null,
   logo_file: null,
   favicon_file: null,
 });
 
 const logoInput = ref(null);
 const faviconInput = ref(null);
+const propertiesBannerInput = ref(null);
 
 const logoPreviewUrl = computed(() => {
   if (form.logo_file instanceof File) return URL.createObjectURL(form.logo_file);
@@ -162,12 +229,19 @@ const faviconPreviewUrl = computed(() => {
   if (form.favicon_file instanceof File) return URL.createObjectURL(form.favicon_file);
   return props.settings?.favicon_url || '';
 });
+const propertiesBannerPreviewUrl = computed(() => {
+  if (form.properties_banner_image_file instanceof File) return URL.createObjectURL(form.properties_banner_image_file);
+  return props.settings?.properties_banner_image_url || '';
+});
 
 const pickLogo = () => {
   logoInput.value?.click();
 };
 const pickFavicon = () => {
   faviconInput.value?.click();
+};
+const pickPropertiesBanner = () => {
+  propertiesBannerInput.value?.click();
 };
 
 const onLogoChange = (event) => {
@@ -177,6 +251,10 @@ const onLogoChange = (event) => {
 const onFaviconChange = (event) => {
   const file = event?.target?.files?.[0] || null;
   form.favicon_file = file;
+};
+const onPropertiesBannerChange = (event) => {
+  const file = event?.target?.files?.[0] || null;
+  form.properties_banner_image_file = file;
 };
 
 const save = () => {

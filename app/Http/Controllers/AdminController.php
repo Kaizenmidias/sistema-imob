@@ -1298,6 +1298,13 @@ class AdminController extends Controller
             'font_size_title' => ['nullable', 'integer', 'min:18', 'max:72'],
             'home_hero_overlay_color' => ['nullable', 'string', 'max:20'],
             'home_hero_overlay_opacity' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'properties_banner_title' => ['nullable', 'string', 'max:255'],
+            'properties_banner_subtitle' => ['nullable', 'string', 'max:500'],
+            'properties_banner_title_color' => ['nullable', 'string', 'max:20'],
+            'properties_banner_subtitle_color' => ['nullable', 'string', 'max:20'],
+            'properties_banner_overlay_color' => ['nullable', 'string', 'max:20'],
+            'properties_banner_overlay_opacity' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'properties_banner_image_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,svg', 'max:5120'],
             'logo_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,svg', 'max:4096'],
             'favicon_file' => ['nullable', 'file', 'mimes:ico,png,jpg,jpeg,svg,webp', 'max:2048'],
         ]);
@@ -1312,6 +1319,12 @@ class AdminController extends Controller
             'font_size_title',
             'home_hero_overlay_color',
             'home_hero_overlay_opacity',
+            'properties_banner_title',
+            'properties_banner_subtitle',
+            'properties_banner_title_color',
+            'properties_banner_subtitle_color',
+            'properties_banner_overlay_color',
+            'properties_banner_overlay_opacity',
         ] as $key) {
             if (!array_key_exists($key, $validated)) {
                 continue;
@@ -1327,6 +1340,12 @@ class AdminController extends Controller
             $file = $request->file('logo_file');
             $path = Storage::disk('public')->putFile('branding/logo', $file);
             Setting::updateOrCreate(['chave' => 'logo_url'], ['valor' => url('/storage/' . $path)]);
+        }
+
+        if ($request->hasFile('properties_banner_image_file')) {
+            $file = $request->file('properties_banner_image_file');
+            $path = Storage::disk('public')->putFile('branding/banners', $file);
+            Setting::updateOrCreate(['chave' => 'properties_banner_image_url'], ['valor' => url('/storage/' . $path)]);
         }
 
         if ($request->hasFile('favicon_file')) {

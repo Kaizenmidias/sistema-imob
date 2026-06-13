@@ -4,7 +4,7 @@
     <div class="absolute inset-0 bg-gray-600 bg-opacity-75 transition-opacity" @click="close"></div>
     <!-- Side panel -->
     <div :class="[
-      'fixed inset-y-0 right-0 max-w-xs w-full bg-blue-900 text-white shadow-xl transform transition-transform duration-300 ease-in-out',
+      'fixed inset-y-0 right-0 max-w-xs w-full bg-blue-900/80 text-white shadow-xl transform transition-transform duration-300 ease-in-out backdrop-blur-md border-l border-white/10',
       isOpen ? 'translate-x-0' : 'translate-x-full'
     ]">
       <div class="flex items-center justify-between h-20 px-4">
@@ -12,7 +12,7 @@
           <img v-if="logoUrl" :src="logoUrl" :alt="siteName" class="h-10 w-auto object-contain" />
           <div v-else class="text-2xl font-bold">{{ siteName }}</div>
         </a>
-        <button @click="close" class="p-2 hover:bg-blue-800 rounded-full transition">
+        <button @click="close" class="p-2 hover:bg-white/10 rounded-full transition">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
@@ -21,7 +21,21 @@
       <nav class="mt-6 px-4">
         <div class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Menu</div>
         <div class="space-y-4">
-          <a v-for="item in menuItems" :key="item.id" :href="item.url" @click="close" class="flex items-center space-x-3 p-3 hover:bg-blue-800 rounded-lg transition">
+          <a v-for="item in primaryLinks" :key="`p-${item.url}`" :href="item.url" @click="close" class="flex items-center space-x-3 p-3 hover:bg-white/10 rounded-lg transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <template v-if="item.icon === 'tag'">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+              </template>
+              <template v-else-if="item.icon === 'key'">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+              </template>
+              <template v-else>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+              </template>
+            </svg>
+            <span class="text-lg font-medium">{{ item.label }}</span>
+          </a>
+          <a v-for="item in menuItems" :key="item.id" :href="item.url" @click="close" class="flex items-center space-x-3 p-3 hover:bg-white/10 rounded-lg transition">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <template v-if="item.icon === 'users'">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -72,6 +86,33 @@ const page = usePage();
 const settings = computed(() => page.props.settings || {});
 const siteName = computed(() => settings.value.nome_empresa || 'Imobiliária');
 const logoUrl = computed(() => settings.value.logo_url || '');
+
+function normalizeUrl(value) {
+  const v = (value || '').toString().trim();
+  if (!v) return '';
+  try {
+    const u = new URL(v, 'https://example.com');
+    const path = u.pathname.replace(/\/+$/, '') || '/';
+    return path;
+  } catch {
+    return v.replace(/\/+$/, '') || '/';
+  }
+}
+
+const menuUrlSet = computed(() => {
+  const items = Array.isArray(props.menuItems) ? props.menuItems : [];
+  return new Set(items.map((i) => normalizeUrl(i?.url)));
+});
+
+const primaryLinks = computed(() => {
+  const candidates = [
+    { label: 'Início', url: '/', icon: 'home' },
+    { label: 'Imóveis', url: '/imoveis', icon: 'tag' },
+    { label: 'Venda seu Imóvel', url: '/venda-seu-imovel', icon: 'key' },
+  ];
+
+  return candidates.filter((c) => !menuUrlSet.value.has(normalizeUrl(c.url)));
+});
 
 const emit = defineEmits(['close']);
 

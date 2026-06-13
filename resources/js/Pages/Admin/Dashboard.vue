@@ -9,6 +9,14 @@
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <div class="bg-white border border-gray-200 rounded-xl shadow px-3 py-2 flex items-center gap-2">
+            <select v-model="rangePreset" class="text-sm border border-gray-200 rounded-lg px-2 py-1 bg-white" @change="applyPreset">
+              <option value="">Período</option>
+              <option value="today">Hoje</option>
+              <option value="yesterday">Ontem</option>
+              <option value="last_7_days">Últimos 7 dias</option>
+              <option value="this_month">Este mês</option>
+              <option value="this_year">Este ano</option>
+            </select>
             <input v-model="rangeStart" type="date" class="text-sm border border-gray-200 rounded-lg px-2 py-1">
             <span class="text-gray-400 text-sm">—</span>
             <input v-model="rangeEnd" type="date" class="text-sm border border-gray-200 rounded-lg px-2 py-1">
@@ -319,6 +327,7 @@ const props = defineProps({
 const page = usePage();
 const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 
+const rangePreset = ref('');
 const rangeStart = ref(props.range?.start || '');
 const rangeEnd = ref(props.range?.end || '');
 
@@ -335,6 +344,63 @@ function applyRange() {
   if (rangeStart.value) payload.start = rangeStart.value;
   if (rangeEnd.value) payload.end = rangeEnd.value;
   router.get(`${adminBase.value}`, payload, { preserveState: true, preserveScroll: true });
+}
+
+function formatDateInput(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function applyPreset() {
+  const preset = rangePreset.value;
+  if (!preset) return;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const start = new Date(today);
+  const end = new Date(today);
+
+  if (preset === 'today') {
+    rangeStart.value = formatDateInput(start);
+    rangeEnd.value = formatDateInput(end);
+    applyRange();
+    return;
+  }
+
+  if (preset === 'yesterday') {
+    start.setDate(start.getDate() - 1);
+    end.setDate(end.getDate() - 1);
+    rangeStart.value = formatDateInput(start);
+    rangeEnd.value = formatDateInput(end);
+    applyRange();
+    return;
+  }
+
+  if (preset === 'last_7_days') {
+    start.setDate(start.getDate() - 6);
+    rangeStart.value = formatDateInput(start);
+    rangeEnd.value = formatDateInput(end);
+    applyRange();
+    return;
+  }
+
+  if (preset === 'this_month') {
+    start.setDate(1);
+    rangeStart.value = formatDateInput(start);
+    rangeEnd.value = formatDateInput(end);
+    applyRange();
+    return;
+  }
+
+  if (preset === 'this_year') {
+    start.setMonth(0, 1);
+    rangeStart.value = formatDateInput(start);
+    rangeEnd.value = formatDateInput(end);
+    applyRange();
+  }
 }
 
 function formatNumber(value) {
