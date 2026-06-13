@@ -21,7 +21,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
         </svg>
         <p class="text-gray-700 font-medium">Arraste ou clique para enviar a imagem de destaque</p>
-        <p class="text-xs text-gray-500 mt-2">Formatos: JPG, PNG, WEBP, HEIC. Maximo {{ maxSizeLabel }} por arquivo.</p>
+        <p class="text-xs text-gray-500 mt-2">Upload assíncrono com Uppy. Formatos: JPG, PNG, WEBP, HEIC. Maximo {{ maxSizeLabel }} por arquivo.</p>
       </div>
 
       <div v-if="featuredItem" class="mt-4 border border-gray-200 rounded-xl overflow-hidden bg-white">
@@ -39,6 +39,9 @@
             <button v-if="featuredItem.status === 'error'" type="button" class="text-xs font-semibold text-blue-700 hover:text-blue-900" @click.stop="retryItem(featuredItem)">
               Reenviar
             </button>
+            <button v-if="featuredItem.status === 'uploading'" type="button" class="text-xs font-semibold text-amber-700 hover:text-amber-900" @click.stop="cancelItem(featuredItem)">
+              Cancelar
+            </button>
             <button type="button" class="text-xs font-semibold text-red-600 hover:text-red-800" @click.stop="removeFeatured">
               Remover
             </button>
@@ -51,7 +54,7 @@
       <div class="flex items-center justify-between gap-3">
         <label class="block text-gray-700 text-sm font-medium">Galeria</label>
         <div class="text-xs text-gray-500">
-          Ate {{ maxFiles }} imagens por imovel
+          Sem limite de quantidade
         </div>
       </div>
       <input ref="galleryInputRef" type="file" :accept="acceptAttr" multiple class="hidden" @change="onGallerySelected">
@@ -68,7 +71,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
         </svg>
         <p class="text-gray-700 font-medium">Arraste varias imagens ou clique para enviar</p>
-        <p class="text-xs text-gray-500 mt-2">As imagens sobem primeiro para uma area temporaria segura e serao processadas em background.</p>
+        <p class="text-xs text-gray-500 mt-2">Uploads paralelos com Uppy. Cada arquivo sobe separadamente, vai para area temporaria segura e depois segue para a fila de processamento.</p>
       </div>
 
       <div v-if="uploadError" class="text-sm text-red-600 mt-2">{{ uploadError }}</div>
@@ -96,6 +99,9 @@
             <button v-if="item.status === 'error'" type="button" class="bg-white/95 hover:bg-white text-blue-700 px-2 py-1 rounded text-[11px] font-semibold" @click.stop="retryItem(item)">
               Retry
             </button>
+            <button v-if="item.status === 'uploading'" type="button" class="bg-white/95 hover:bg-white text-amber-700 px-2 py-1 rounded text-[11px] font-semibold" @click.stop="cancelItem(item)">
+              Cancelar
+            </button>
             <button type="button" class="bg-white/95 hover:bg-white text-red-600 px-2 py-1 rounded text-[11px] font-semibold" @click.stop="removeGallery(item.id)">
               Remover
             </button>
@@ -108,7 +114,9 @@
 
 <script setup>
 import axios from 'axios';
-import { computed, ref } from 'vue';
+import Uppy from '@uppy/core';
+import XHRUpload from '@uppy/xhr-upload';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
   existingPhotos: {
@@ -124,12 +132,16 @@ const props = defineProps({
     required: true,
   },
   maxFiles: {
-    type: Number,
-    default: 50,
+    type: [Number, null],
+    default: null,
   },
   maxFileSizeBytes: {
     type: Number,
-    default: 20 * 1024 * 1024,
+    default: 10 * 1024 * 1024,
+  },
+  parallelUploads: {
+    type: Number,
+    default: 6,
   },
 });
 
@@ -149,23 +161,20 @@ const galleryDropActive = ref(false);
 const dragSourceId = ref(null);
 const uploadError = ref('');
 const removedPhotoIds = ref([]);
-
-const existingFeatured = props.existingPhotos.find((photo) => photo?.principal);
-const existingGallery = props.existingPhotos
-  .filter((photo) => !photo?.principal)
-  .sort((a, b) => Number(a?.ordem ?? 0) - Number(b?.ordem ?? 0));
-
-const featuredItem = ref(existingFeatured ? normalizeExistingItem(existingFeatured) : null);
-const galleryItems = ref(existingGallery.map(normalizeExistingItem));
+const featuredItem = ref(null);
+const galleryItems = ref([]);
+let featuredUppy = null;
+let galleryUppy = null;
 
 const maxSizeLabel = computed(() => `${Math.round(props.maxFileSizeBytes / 1024 / 1024)}MB`);
-const uploadSummary = computed(() => `${currentImageCount()} / ${props.maxFiles} imagens`);
+const uploadSummary = computed(() => `${currentImageCount()} imagens na fila`);
 
 function normalizeExistingItem(photo) {
-  const processing = photo?.processing_status && photo.processing_status !== 'processed';
+  const processing = photo?.processing_status && !['completed', 'uploaded'].includes(photo.processing_status);
 
   return {
     id: `existing-${photo.id}`,
+    uppyFileId: null,
     existingPhotoId: photo.id,
     token: null,
     file: null,
@@ -180,11 +189,12 @@ function normalizeExistingItem(photo) {
 
 function createUploadItem(file) {
   return {
-    id: crypto.randomUUID(),
+    id: file.id,
+    uppyFileId: file.id,
     existingPhotoId: null,
     token: null,
-    file,
-    previewUrl: URL.createObjectURL(file),
+    file: file.data || null,
+    previewUrl: file.preview || (file.data instanceof File ? URL.createObjectURL(file.data) : placeholderImage),
     name: file.name,
     status: 'queued',
     progress: 0,
@@ -202,7 +212,7 @@ function openGalleryPicker() {
 }
 
 async function onFeaturedSelected(event) {
-  const file = event.target.files?.[0] || null;
+  const file = event.target.files?.[0];
   if (!file) return;
   await replaceFeatured(file);
   if (featuredInputRef.value) featuredInputRef.value.value = '';
@@ -232,9 +242,7 @@ async function replaceFeatured(file) {
   if (!validateBeforeAdd([file])) return;
 
   await removeFeatured();
-  const item = createUploadItem(file);
-  featuredItem.value = item;
-  await uploadItem(item);
+  addFilesToUppy(featuredUppy, [file]);
 }
 
 async function appendGallery(files) {
@@ -242,19 +250,10 @@ async function appendGallery(files) {
   const validFiles = files.filter(Boolean);
   if (!validateBeforeAdd(validFiles)) return;
 
-  for (const file of validFiles) {
-    const item = createUploadItem(file);
-    galleryItems.value.push(item);
-    await uploadItem(item);
-  }
+  addFilesToUppy(galleryUppy, validFiles);
 }
 
 function validateBeforeAdd(files) {
-  if (currentImageCount() + files.length > props.maxFiles) {
-    uploadError.value = `O limite maximo por imovel e de ${props.maxFiles} imagens.`;
-    return false;
-  }
-
   for (const file of files) {
     if (file.size > props.maxFileSizeBytes) {
       uploadError.value = `A imagem ${file.name} excede o limite de ${maxSizeLabel.value}.`;
@@ -265,38 +264,11 @@ function validateBeforeAdd(files) {
   return true;
 }
 
-async function uploadItem(item) {
-  if (!(item.file instanceof File)) return;
-
-  item.status = 'uploading';
-  item.progress = 0;
-  item.error = '';
-
-  const formData = new FormData();
-  formData.append('file', item.file);
-
-  try {
-    const response = await axios.post(props.uploadUrl, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: (event) => {
-        if (!event.total) return;
-        item.progress = Math.round((event.loaded / event.total) * 100);
-      },
-    });
-
-    item.token = response.data?.token || null;
-    item.status = 'uploaded';
-    item.progress = 100;
-  } catch (error) {
-    item.status = 'error';
-    item.error = error?.response?.data?.message || 'Falha ao enviar a imagem.';
-  }
-}
-
 async function removeFeatured() {
   if (!featuredItem.value) return;
+  if (featuredItem.value.uppyFileId && featuredUppy?.getFile(featuredItem.value.uppyFileId)) {
+    featuredUppy.removeFile(featuredItem.value.uppyFileId);
+  }
   await removeItemToken(featuredItem.value);
 
   if (featuredItem.value.existingPhotoId) {
@@ -310,6 +282,9 @@ async function removeGallery(id) {
   const item = galleryItems.value.find((entry) => entry.id === id);
   if (!item) return;
 
+  if (item.uppyFileId && galleryUppy?.getFile(item.uppyFileId)) {
+    galleryUppy.removeFile(item.uppyFileId);
+  }
   await removeItemToken(item);
 
   if (item.existingPhotoId) {
@@ -330,8 +305,44 @@ async function removeItemToken(item) {
 }
 
 async function retryItem(item) {
+  if (item?.uppyFileId && galleryUppy?.getFile(item.uppyFileId)) {
+    try {
+      await galleryUppy.retryUpload(item.uppyFileId);
+      return;
+    } catch {
+    }
+  }
+
+  if (item?.uppyFileId && featuredUppy?.getFile(item.uppyFileId)) {
+    try {
+      await featuredUppy.retryUpload(item.uppyFileId);
+      return;
+    } catch {
+    }
+  }
+
   if (!(item?.file instanceof File)) return;
-  await uploadItem(item);
+  if (item === featuredItem.value) {
+    addFilesToUppy(featuredUppy, [item.file]);
+    return;
+  }
+
+  addFilesToUppy(galleryUppy, [item.file]);
+}
+
+function cancelItem(item) {
+  if (!item?.uppyFileId) return;
+
+  if (featuredUppy?.getFile(item.uppyFileId)) {
+    featuredUppy.removeFile(item.uppyFileId);
+    featuredItem.value = null;
+    return;
+  }
+
+  if (galleryUppy?.getFile(item.uppyFileId)) {
+    galleryUppy.removeFile(item.uppyFileId);
+    galleryItems.value = galleryItems.value.filter((entry) => entry.id !== item.id);
+  }
 }
 
 function onDragStart(id) {
@@ -359,6 +370,7 @@ function statusLabel(item) {
     uploading: `Enviando ${item.progress}%`,
     uploaded: 'Upload temporario concluido',
     processing: 'Processando em background',
+    completed: 'Processamento concluido',
     error: 'Falha no envio',
   }[item.status] || 'Pendente';
 }
@@ -388,4 +400,123 @@ function getSubmissionPayload() {
 defineExpose({
   getSubmissionPayload,
 });
+
+function createUppy(kind) {
+  const uppy = new Uppy({
+    autoProceed: true,
+    allowMultipleUploadBatches: true,
+    restrictions: {
+      allowedFileTypes: ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'],
+      maxFileSize: props.maxFileSizeBytes,
+      maxNumberOfFiles: kind === 'featured' ? 1 : null,
+    },
+  });
+
+  uppy.use(XHRUpload, {
+    endpoint: props.uploadUrl,
+    method: 'post',
+    fieldName: 'file',
+    formData: true,
+    limit: props.parallelUploads,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+    },
+  });
+
+  uppy.on('file-added', (file) => {
+    const item = createUploadItem(file);
+    if (kind === 'featured') {
+      featuredItem.value = item;
+      return;
+    }
+
+    galleryItems.value.push(item);
+  });
+
+  uppy.on('upload-progress', (file, progress) => {
+    const item = findItemByUppyId(file.id);
+    if (!item) return;
+    item.status = 'uploading';
+    item.progress = Math.round(((progress.bytesUploaded || 0) / Math.max(progress.bytesTotal || 1, 1)) * 100);
+  });
+
+  uppy.on('upload-success', (file, response) => {
+    const item = findItemByUppyId(file.id);
+    if (!item) return;
+    item.token = response?.body?.token || null;
+    item.status = 'uploaded';
+    item.progress = 100;
+    item.error = '';
+  });
+
+  uppy.on('upload-error', (file, error, response) => {
+    const item = findItemByUppyId(file.id);
+    if (!item) return;
+    item.status = 'error';
+    item.error = response?.body?.message || error?.message || 'Falha ao enviar a imagem.';
+  });
+
+  uppy.on('restriction-failed', (file, error) => {
+    uploadError.value = error?.message || `Falha ao validar ${file?.name || 'a imagem'}.`;
+  });
+
+  return uppy;
+}
+
+function addFilesToUppy(uppy, files) {
+  if (!uppy) return;
+
+  files.forEach((file) => {
+    try {
+      uppy.addFile({
+        name: file.name,
+        type: file.type,
+        data: file,
+      });
+    } catch (error) {
+      uploadError.value = error?.message || 'Nao foi possivel adicionar a imagem para upload.';
+    }
+  });
+}
+
+function findItemByUppyId(fileId) {
+  if (featuredItem.value?.uppyFileId === fileId) {
+    return featuredItem.value;
+  }
+
+  return galleryItems.value.find((entry) => entry.uppyFileId === fileId) || null;
+}
+
+function syncExistingPhotos(photos) {
+  const existingFeatured = photos.find((photo) => photo?.principal);
+  const existingGallery = photos
+    .filter((photo) => !photo?.principal)
+    .sort((a, b) => Number(a?.ordem ?? 0) - Number(b?.ordem ?? 0));
+
+  if (!featuredItem.value || featuredItem.value.isExisting) {
+    featuredItem.value = existingFeatured ? normalizeExistingItem(existingFeatured) : featuredItem.value?.isExisting ? null : featuredItem.value;
+  }
+
+  const stagedGallery = galleryItems.value.filter((entry) => !entry.isExisting);
+  galleryItems.value = [...existingGallery.map(normalizeExistingItem), ...stagedGallery];
+}
+
+onMounted(() => {
+  featuredUppy = createUppy('featured');
+  galleryUppy = createUppy('gallery');
+  syncExistingPhotos(props.existingPhotos || []);
+});
+
+onBeforeUnmount(() => {
+  featuredUppy?.destroy();
+  galleryUppy?.destroy();
+});
+
+watch(
+  () => props.existingPhotos,
+  (photos) => {
+    syncExistingPhotos(Array.isArray(photos) ? photos : []);
+  },
+  { deep: true }
+);
 </script>

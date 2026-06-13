@@ -2,14 +2,11 @@
 
 namespace App\Actions\Properties;
 
-use App\Jobs\GeneratePropertyThumbnailsJob;
-use App\Jobs\OptimizePropertyImageJob;
 use App\Jobs\ProcessPropertyImageJob;
 use App\Models\Property;
 use App\Models\PropertyImageUpload;
 use App\Models\PropertyPhoto;
 use App\Models\User;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -28,14 +25,6 @@ class AttachPropertyImageUploadsAction
             ->unique('id')
             ->values();
 
-        $incomingCount = ($featuredUpload ? 1 : 0) + $galleryUploads->count();
-        $totalAfterAttach = $property->photos()->count() + $incomingCount;
-        if ($totalAfterAttach > (int) config('image_uploads.max_files_per_property', 50)) {
-            throw ValidationException::withMessages([
-                'gallery_upload_tokens' => 'Cada imovel pode ter no maximo 50 imagens.',
-            ]);
-        }
-
         DB::transaction(function () use ($property, $featuredUpload, $galleryUploads): void {
             if ($featuredUpload) {
                 $featuredPhoto = PropertyPhoto::create([
@@ -47,10 +36,10 @@ class AttachPropertyImageUploadsAction
                     'size' => $featuredUpload->size,
                     'mime_type' => $featuredUpload->mime_type,
                     'optimized' => false,
-                    'processing_status' => 'queued',
+                    'processing_status' => 'pending',
                 ]);
 
-                $this->dispatchChain($featuredPhoto, $featuredUpload);
+                $this->dispatchProcessJob($featuredPhoto, $featuredUpload);
             }
 
             $currentMaxOrder = (int) ($property->photos()->where('principal', false)->max('ordem') ?? 0);
@@ -64,10 +53,10 @@ class AttachPropertyImageUploadsAction
                     'size' => $upload->size,
                     'mime_type' => $upload->mime_type,
                     'optimized' => false,
-                    'processing_status' => 'queued',
+                    'processing_status' => 'pending',
                 ]);
 
-                $this->dispatchChain($photo, $upload);
+                $this->dispatchProcessJob($photo, $upload);
             }
         });
     }
@@ -81,7 +70,7 @@ class AttachPropertyImageUploadsAction
         $upload = PropertyImageUpload::query()
             ->where('token', $token)
             ->where('user_id', $user->id)
-            ->where('status', 'staged')
+            ->where('status', 'pending')
             ->where(function ($query): void {
                 $query->whereNull('expires_at')
                     ->orWhere('expires_at', '>', now());
@@ -97,12 +86,8 @@ class AttachPropertyImageUploadsAction
         return $upload;
     }
 
-    private function dispatchChain(PropertyPhoto $photo, PropertyImageUpload $upload): void
+    private function dispatchProcessJob(PropertyPhoto $photo, PropertyImageUpload $upload): void
     {
-        Bus::chain([
-            new ProcessPropertyImageJob($photo->id, $upload->id),
-            new OptimizePropertyImageJob($photo->id, $upload->id),
-            new GeneratePropertyThumbnailsJob($photo->id, $upload->id),
-        ])->dispatch();
+        ProcessPropertyImageJob::dispatch($photo->id, $upload->id);
     }
 }

@@ -830,8 +830,11 @@ class AdminController extends Controller
             'specialCategories' => $specialCategories,
             'generatedReferenceCode' => $generatedReferenceCode,
             'imageUploadConfig' => [
-                'maxFiles' => (int) config('image_uploads.max_files_per_property', 50),
-                'maxFileSizeBytes' => (int) config('image_uploads.max_file_size_bytes', 20 * 1024 * 1024),
+                'maxFiles' => config('image_uploads.max_files_per_property'),
+                'maxFileSizeBytes' => (int) config('image_uploads.max_file_size_bytes', 10 * 1024 * 1024),
+                'parallelUploads' => (int) config('image_uploads.parallel_uploads', 6),
+                'pollIntervalMs' => (int) config('image_uploads.poll_interval_ms', 4000),
+                'requestMaxBodyHint' => (int) config('image_uploads.request_max_body_hint', 256 * 1024 * 1024),
             ],
         ]);
     }
@@ -848,6 +851,39 @@ class AdminController extends Controller
             'mime_type' => $upload->mime_type,
             'size' => $upload->size,
             'status' => $upload->status,
+        ]);
+    }
+
+    public function propertyImageProcessingStatus(Property $property): JsonResponse
+    {
+        $property->load('photos');
+
+        $photos = $property->photos
+            ->sortBy(fn (PropertyPhoto $photo) => [$photo->principal ? 0 : 1, $photo->ordem, $photo->id])
+            ->values();
+
+        $counts = [
+            'total' => $photos->count(),
+            'pending' => $photos->where('processing_status', 'pending')->count(),
+            'processing' => $photos->where('processing_status', 'processing')->count(),
+            'completed' => $photos->where('processing_status', 'completed')->count(),
+            'failed' => $photos->where('processing_status', 'failed')->count(),
+        ];
+
+        return response()->json([
+            'counts' => $counts,
+            'is_processing' => ($counts['pending'] + $counts['processing']) > 0,
+            'photos' => $photos->map(fn (PropertyPhoto $photo) => [
+                'id' => $photo->id,
+                'principal' => (bool) $photo->principal,
+                'ordem' => (int) $photo->ordem,
+                'url' => $photo->url,
+                'original_url' => $photo->original_url,
+                'medium_url' => $photo->medium_url,
+                'thumb_small_url' => $photo->thumb_small_url,
+                'processing_status' => $photo->processing_status,
+                'processing_error' => $photo->processing_error,
+            ])->values(),
         ]);
     }
 
@@ -919,8 +955,11 @@ class AdminController extends Controller
             'property' => $property,
             'selectedSpecialCategoryIds' => $property->specialCategories->pluck('id')->values(),
             'imageUploadConfig' => [
-                'maxFiles' => (int) config('image_uploads.max_files_per_property', 50),
-                'maxFileSizeBytes' => (int) config('image_uploads.max_file_size_bytes', 20 * 1024 * 1024),
+                'maxFiles' => config('image_uploads.max_files_per_property'),
+                'maxFileSizeBytes' => (int) config('image_uploads.max_file_size_bytes', 10 * 1024 * 1024),
+                'parallelUploads' => (int) config('image_uploads.parallel_uploads', 6),
+                'pollIntervalMs' => (int) config('image_uploads.poll_interval_ms', 4000),
+                'requestMaxBodyHint' => (int) config('image_uploads.request_max_body_hint', 256 * 1024 * 1024),
             ],
         ]);
     }
@@ -976,6 +1015,7 @@ class AdminController extends Controller
 
             foreach ($photosToRemove as $photo) {
                 Storage::disk('public')->delete(array_filter([
+                    $photo->original_path,
                     $photo->arquivo,
                     $photo->thumb_small_path,
                     $photo->thumb_medium_path,
@@ -1086,6 +1126,7 @@ class AdminController extends Controller
     {
         foreach ($property->photos as $photo) {
             Storage::disk('public')->delete(array_filter([
+                $photo->original_path,
                 $photo->arquivo,
                 $photo->thumb_small_path,
                 $photo->thumb_medium_path,
@@ -1117,6 +1158,7 @@ class AdminController extends Controller
         foreach ($property->photos as $photo) {
             $source = $photo->arquivo;
             $dest = null;
+            $originalDest = null;
             $thumbSmallDest = null;
             $thumbMediumDest = null;
 
@@ -1132,6 +1174,12 @@ class AdminController extends Controller
                 Storage::disk('public')->copy($photo->thumb_small_path, $thumbSmallDest);
             }
 
+            if (!empty($photo->original_path) && Storage::disk('public')->exists($photo->original_path)) {
+                $ext = pathinfo($photo->original_path, PATHINFO_EXTENSION);
+                $originalDest = "properties/{$new->id}/original-" . Str::random(20) . ($ext ? ('.' . $ext) : '');
+                Storage::disk('public')->copy($photo->original_path, $originalDest);
+            }
+
             if (!empty($photo->thumb_medium_path) && Storage::disk('public')->exists($photo->thumb_medium_path)) {
                 $thumbMediumDest = "properties/{$new->id}/thumb-medium-" . Str::random(20) . '.webp';
                 Storage::disk('public')->copy($photo->thumb_medium_path, $thumbMediumDest);
@@ -1142,6 +1190,7 @@ class AdminController extends Controller
                 'property_id' => $new->id,
                 'arquivo' => $path,
                 'url' => $path ? Storage::disk('public')->url($path) : '',
+                'original_path' => $originalDest,
                 'width' => $photo->width,
                 'height' => $photo->height,
                 'size' => $photo->size,

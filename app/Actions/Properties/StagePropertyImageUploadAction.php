@@ -9,7 +9,6 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 
 class StagePropertyImageUploadAction
 {
@@ -20,17 +19,6 @@ class StagePropertyImageUploadAction
 
     public function execute(User $user, UploadedFile $file): PropertyImageUpload
     {
-        $activeUploads = PropertyImageUpload::query()
-            ->where('user_id', $user->id)
-            ->whereIn('status', ['staged', 'processing'])
-            ->count();
-
-        if ($activeUploads >= (int) config('image_uploads.max_files_per_property', 50)) {
-            throw ValidationException::withMessages([
-                'file' => 'Voce atingiu o limite de uploads temporarios para este imovel.',
-            ]);
-        }
-
         $data = $this->securityService->inspectUploadedFile($file);
         $diskName = (string) config('image_uploads.temporary_disk', 'local');
         $directory = trim((string) config('image_uploads.temporary_directory', 'tmp/property-images'), '/');
@@ -52,7 +40,7 @@ class StagePropertyImageUploadAction
             'mime_type' => $data->mimeType,
             'size' => $data->size,
             'sha256' => $data->sha256,
-            'status' => 'staged',
+            'status' => 'pending',
             'expires_at' => now()->addDay(),
         ]);
 

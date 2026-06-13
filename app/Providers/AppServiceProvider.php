@@ -26,7 +26,7 @@ class AppServiceProvider extends ServiceProvider
             $key = $request->user()?->id ?: $request->ip();
 
             return [
-                Limit::perMinute(60)->by('property-image-uploads:' . $key),
+                Limit::perMinute(600)->by('property-image-uploads:' . $key),
             ];
         });
     }

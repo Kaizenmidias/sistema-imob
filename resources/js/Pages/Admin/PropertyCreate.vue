@@ -2,6 +2,23 @@
   <AdminLayout>
     <template #pageTitle>{{ isEdit ? 'Editar Imóvel' : 'Novo Imóvel' }}</template>
     
+    <div v-if="showProcessingBanner" class="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-4 text-blue-950">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <div class="font-semibold">Processando imagens em background</div>
+          <div class="text-sm text-blue-900/80 mt-1">
+            {{ processingSummaryText }}
+          </div>
+        </div>
+        <div class="text-sm font-semibold whitespace-nowrap">
+          {{ processingCounts.completed }}/{{ processingCounts.total }} concluídas
+        </div>
+      </div>
+      <div class="mt-3 h-2 rounded-full bg-blue-100 overflow-hidden">
+        <div class="h-2 rounded-full bg-blue-700 transition-all duration-300" :style="{ width: `${processingProgress}%` }"></div>
+      </div>
+    </div>
+
     <div class="bg-white rounded-xl shadow p-6 border border-gray-200">
       <form @submit.prevent="submit" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div class="space-y-6">
@@ -141,11 +158,12 @@
 
           <PropertyImageUploader
             ref="imageUploaderRef"
-            :existing-photos="property?.photos || []"
+            :existing-photos="propertyPhotos"
             :upload-url="`${adminBase}/properties/uploads`"
             :delete-upload-base-url="`${adminBase}/properties/uploads`"
-            :max-files="imageUploadConfig?.maxFiles || 50"
-            :max-file-size-bytes="imageUploadConfig?.maxFileSizeBytes || (20 * 1024 * 1024)"
+            :max-files="imageUploadConfig?.maxFiles ?? null"
+            :max-file-size-bytes="imageUploadConfig?.maxFileSizeBytes || (10 * 1024 * 1024)"
+            :parallel-uploads="imageUploadConfig?.parallelUploads || 6"
           />
           <div v-if="form.errors.featured_upload_token" class="text-sm text-red-600 -mt-4">{{ form.errors.featured_upload_token }}</div>
           <div v-if="form.errors.gallery_upload_tokens" class="text-sm text-red-600 -mt-4">{{ form.errors.gallery_upload_tokens }}</div>
@@ -185,7 +203,8 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import axios from 'axios';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
 import PropertyImageUploader from '@/Shared/PropertyImageUploader.vue';
@@ -220,7 +239,7 @@ const props = defineProps({
   },
   imageUploadConfig: {
     type: Object,
-    default: () => ({ maxFiles: 50, maxFileSizeBytes: 20 * 1024 * 1024 }),
+    default: () => ({ maxFiles: null, maxFileSizeBytes: 10 * 1024 * 1024, parallelUploads: 6, pollIntervalMs: 4000 }),
   },
 });
 
@@ -264,6 +283,15 @@ const form = useForm({
 
 const imageUploaderRef = ref(null);
 const uploadFormError = ref('');
+const propertyPhotos = ref(Array.isArray(props.property?.photos) ? props.property.photos : []);
+const processingCounts = ref({
+  total: propertyPhotos.value.length,
+  pending: propertyPhotos.value.filter((photo) => photo?.processing_status === 'pending').length,
+  processing: propertyPhotos.value.filter((photo) => photo?.processing_status === 'processing').length,
+  completed: propertyPhotos.value.filter((photo) => photo?.processing_status === 'completed').length,
+  failed: propertyPhotos.value.filter((photo) => photo?.processing_status === 'failed').length,
+});
+let processingTimer = null;
 
 const formatCurrencyBRL = (value) => {
   const digits = String(value ?? '').replace(/\D/g, '');
@@ -271,9 +299,50 @@ const formatCurrencyBRL = (value) => {
   return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
 
+const showProcessingBanner = computed(() => isEdit.value && processingCounts.value.total > 0 && (processingCounts.value.pending > 0 || processingCounts.value.processing > 0 || processingCounts.value.failed > 0));
+const processingProgress = computed(() => {
+  const total = Number(processingCounts.value.total || 0);
+  if (!total) return 0;
+  return Math.max(0, Math.min(100, Math.round((Number(processingCounts.value.completed || 0) / total) * 100)));
+});
+const processingSummaryText = computed(() => {
+  const { pending, processing, failed } = processingCounts.value;
+  if (failed > 0) {
+    return `${processingCounts.value.completed} concluídas, ${failed} com falha e ${pending + processing} ainda em processamento.`;
+  }
+
+  return `${pending} pendentes e ${processing} em processamento na fila.`;
+});
+
 const onPriceInput = () => {
   form.valor = formatCurrencyBRL(form.valor);
 };
+
+async function refreshProcessingStatus() {
+  if (!isEdit.value || !props.property?.id) return;
+
+  try {
+    const response = await axios.get(`${adminBase.value}/properties/${props.property.id}/image-processing-status`);
+    const counts = response.data?.counts || {};
+    processingCounts.value = {
+      total: Number(counts.total || 0),
+      pending: Number(counts.pending || 0),
+      processing: Number(counts.processing || 0),
+      completed: Number(counts.completed || 0),
+      failed: Number(counts.failed || 0),
+    };
+
+    if (Array.isArray(response.data?.photos)) {
+      propertyPhotos.value = response.data.photos;
+    }
+
+    if ((processingCounts.value.pending + processingCounts.value.processing) === 0 && processingTimer) {
+      clearInterval(processingTimer);
+      processingTimer = null;
+    }
+  } catch {
+  }
+}
 
 const submit = () => {
   uploadFormError.value = '';
@@ -306,4 +375,21 @@ const submit = () => {
 
   form.post(`${adminBase.value}/properties`, { forceFormData: true });
 };
+
+onMounted(() => {
+  if (!isEdit.value || !props.property?.id) return;
+
+  if ((processingCounts.value.pending + processingCounts.value.processing + processingCounts.value.failed) > 0) {
+    refreshProcessingStatus();
+  }
+
+  processingTimer = setInterval(refreshProcessingStatus, props.imageUploadConfig?.pollIntervalMs || 4000);
+});
+
+onBeforeUnmount(() => {
+  if (processingTimer) {
+    clearInterval(processingTimer);
+    processingTimer = null;
+  }
+});
 </script>

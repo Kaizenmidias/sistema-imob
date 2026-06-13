@@ -12,6 +12,7 @@ class PropertyPhoto extends Model
         'property_id',
         'arquivo',
         'url',
+        'original_path',
         'width',
         'height',
         'size',
@@ -27,7 +28,9 @@ class PropertyPhoto extends Model
     ];
 
     protected $appends = [
+        'original_url',
         'thumb_small_url',
+        'medium_url',
         'thumb_medium_url',
     ];
 
@@ -54,12 +57,26 @@ class PropertyPhoto extends Model
         return Storage::disk('public')->url($this->thumb_small_path);
     }
 
-    public function getThumbMediumUrlAttribute(): ?string
+    public function getOriginalUrlAttribute(): ?string
+    {
+        if (empty($this->original_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($this->original_path);
+    }
+
+    public function getMediumUrlAttribute(): ?string
     {
         if (empty($this->thumb_medium_path)) {
             return null;
         }
 
         return Storage::disk('public')->url($this->thumb_medium_path);
+    }
+
+    public function getThumbMediumUrlAttribute(): ?string
+    {
+        return $this->getMediumUrlAttribute();
     }
 }

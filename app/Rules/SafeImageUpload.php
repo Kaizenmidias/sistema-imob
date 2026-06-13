@@ -15,9 +15,10 @@ class SafeImageUpload implements ValidationRule
             return;
         }
 
-        $maxBytes = (int) config('image_uploads.max_file_size_bytes', 20 * 1024 * 1024);
+        $maxBytes = (int) config('image_uploads.max_file_size_bytes', 10 * 1024 * 1024);
         if ($value->getSize() > $maxBytes) {
-            $fail('Cada imagem deve ter no maximo 20MB.');
+            $maxSizeMb = max(1, (int) round($maxBytes / 1024 / 1024));
+            $fail("Cada imagem deve ter no maximo {$maxSizeMb}MB.");
             return;
         }
 
@@ -28,7 +29,11 @@ class SafeImageUpload implements ValidationRule
             return;
         }
 
-        $realMime = (string) $value->getMimeType();
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $realMime = (string) ($finfo ? finfo_file($finfo, $value->getRealPath()) : $value->getMimeType());
+        if ($finfo) {
+            finfo_close($finfo);
+        }
         $allowedMimes = config('image_uploads.allowed_mime_types', []);
         if (!in_array($realMime, $allowedMimes, true)) {
             $fail('Mime type de imagem invalido.');
