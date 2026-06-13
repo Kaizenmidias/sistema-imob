@@ -4,7 +4,7 @@
       <div class="flex items-center justify-between gap-3">
         <label class="block text-gray-700 text-sm font-medium">Imagem de Destaque</label>
         <div class="text-xs text-gray-500">
-          {{ uploadSummary }}
+          {{ uploadHeadline }}
         </div>
       </div>
       <input ref="featuredInputRef" type="file" :accept="acceptAttr" class="hidden" @change="onFeaturedSelected">
@@ -54,7 +54,7 @@
       <div class="flex items-center justify-between gap-3">
         <label class="block text-gray-700 text-sm font-medium">Galeria</label>
         <div class="text-xs text-gray-500">
-          Sem limite de quantidade
+          {{ uploadHeadline }}
         </div>
       </div>
       <input ref="galleryInputRef" type="file" :accept="acceptAttr" multiple class="hidden" @change="onGallerySelected">
@@ -75,6 +75,37 @@
       </div>
 
       <div v-if="uploadError" class="text-sm text-red-600 mt-2">{{ uploadError }}</div>
+      <div v-if="selectedGalleryCount > 0 || selectedFeaturedCount > 0" class="mt-3 grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+          <div class="text-[11px] uppercase tracking-wide text-gray-500">Selecionadas</div>
+          <div class="text-lg font-semibold text-gray-900">{{ totalSelectedCount }}</div>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+          <div class="text-[11px] uppercase tracking-wide text-gray-500">Enviadas</div>
+          <div class="text-lg font-semibold text-emerald-700">{{ uploadedCount }}</div>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+          <div class="text-[11px] uppercase tracking-wide text-gray-500">Na fila</div>
+          <div class="text-lg font-semibold text-amber-700">{{ queuedCount }}</div>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+          <div class="text-[11px] uppercase tracking-wide text-gray-500">Enviando</div>
+          <div class="text-lg font-semibold text-blue-700">{{ uploadingCount }}</div>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+          <div class="text-[11px] uppercase tracking-wide text-gray-500">Falhas</div>
+          <div class="text-lg font-semibold text-red-700">{{ failedCount }}</div>
+        </div>
+      </div>
+      <div v-if="totalSelectedCount > 0" class="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+        <div class="flex items-center justify-between gap-4 text-sm">
+          <div class="font-medium text-blue-950">{{ uploadProgressText }}</div>
+          <div class="font-semibold text-blue-900 whitespace-nowrap">{{ uploadedCount }}/{{ totalSelectedCount }}</div>
+        </div>
+        <div class="mt-2 h-2 rounded-full bg-blue-100 overflow-hidden">
+          <div class="h-2 rounded-full bg-blue-700 transition-all duration-300" :style="{ width: `${uploadCompletionPercentage}%` }"></div>
+        </div>
+      </div>
 
       <div v-if="galleryItems.length > 0" class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         <div
@@ -166,11 +197,48 @@ const galleryItems = ref([]);
 let featuredUppy = null;
 let galleryUppy = null;
 
+const TRACKED_PENDING_STATUSES = ['queued', 'uploading'];
+const TRACKED_SUCCESS_STATUSES = ['uploaded', 'processing', 'completed'];
+const TRACKED_ERROR_STATUSES = ['error', 'failed'];
+
 const maxSizeLabel = computed(() => `${Math.round(props.maxFileSizeBytes / 1024 / 1024)}MB`);
-const uploadSummary = computed(() => `${currentImageCount()} imagens na fila`);
+const selectedFeaturedCount = computed(() => (featuredItem.value ? 1 : 0));
+const selectedGalleryCount = computed(() => galleryItems.value.length);
+const totalSelectedCount = computed(() => selectedFeaturedCount.value + selectedGalleryCount.value);
+const uploadingCount = computed(() => getTrackedItems().filter((item) => item.status === 'uploading').length);
+const queuedCount = computed(() => getTrackedItems().filter((item) => item.status === 'queued').length);
+const uploadedCount = computed(() => getTrackedItems().filter((item) => TRACKED_SUCCESS_STATUSES.includes(item.status)).length);
+const failedCount = computed(() => getTrackedItems().filter((item) => TRACKED_ERROR_STATUSES.includes(item.status)).length);
+const pendingUploadCount = computed(() => getTrackedItems().filter((item) => TRACKED_PENDING_STATUSES.includes(item.status)).length);
+const uploadHeadline = computed(() => {
+  if (totalSelectedCount.value === 0) {
+    return 'Nenhuma imagem selecionada';
+  }
+
+  return `${uploadedCount.value} de ${totalSelectedCount.value} imagens enviadas`;
+});
+const uploadCompletionPercentage = computed(() => {
+  if (totalSelectedCount.value === 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, Math.round((uploadedCount.value / totalSelectedCount.value) * 100)));
+});
+const uploadProgressText = computed(() => {
+  if (failedCount.value > 0) {
+    return `${uploadedCount.value} de ${totalSelectedCount.value} imagens enviadas, ${failedCount.value} falharam`;
+  }
+
+  if (pendingUploadCount.value > 0) {
+    return `${uploadedCount.value} de ${totalSelectedCount.value} imagens enviadas, ${pendingUploadCount.value} pendentes`;
+  }
+
+  return `${uploadedCount.value} de ${totalSelectedCount.value} imagens enviadas`;
+});
 
 function normalizeExistingItem(photo) {
   const processing = photo?.processing_status && !['completed', 'uploaded'].includes(photo.processing_status);
+  const failed = photo?.processing_status === 'failed';
 
   return {
     id: `existing-${photo.id}`,
@@ -180,7 +248,7 @@ function normalizeExistingItem(photo) {
     file: null,
     previewUrl: photo.thumb_small_url || photo.url || placeholderImage,
     name: photo.principal ? 'Imagem de destaque' : `Imagem ${photo.id}`,
-    status: processing ? 'processing' : 'uploaded',
+    status: failed ? 'failed' : (processing ? 'processing' : 'uploaded'),
     progress: processing ? 100 : 0,
     error: photo.processing_error || '',
     isExisting: true,
@@ -371,6 +439,7 @@ function statusLabel(item) {
     uploaded: 'Upload temporario concluido',
     processing: 'Processando em background',
     completed: 'Processamento concluido',
+    failed: 'Falhou no processamento',
     error: 'Falha no envio',
   }[item.status] || 'Pendente';
 }
@@ -380,8 +449,9 @@ function currentImageCount() {
 }
 
 function getSubmissionPayload() {
-  const uploading = [featuredItem.value, ...galleryItems.value].filter(Boolean).some((item) => item.status === 'uploading');
-  const hasErrors = [featuredItem.value, ...galleryItems.value].filter(Boolean).some((item) => item.status === 'error');
+  const trackedItems = getTrackedItems();
+  const pendingItems = trackedItems.filter((item) => TRACKED_PENDING_STATUSES.includes(item.status));
+  const errorItems = trackedItems.filter((item) => TRACKED_ERROR_STATUSES.includes(item.status));
 
   return {
     featured_upload_token: featuredItem.value?.token || null,
@@ -392,8 +462,14 @@ function getSubmissionPayload() {
     photo_order_ids: galleryItems.value
       .filter((item) => item.existingPhotoId && !removedPhotoIds.value.includes(item.existingPhotoId))
       .map((item) => item.existingPhotoId),
-    hasPendingUploads: uploading,
-    hasUploadErrors: hasErrors,
+    selected_count: totalSelectedCount.value,
+    uploaded_count: uploadedCount.value,
+    pending_count: pendingItems.length,
+    failed_count: errorItems.length,
+    hasPendingUploads: pendingItems.length > 0,
+    hasUploadErrors: errorItems.length > 0,
+    pendingItems: pendingItems.map((item) => ({ id: item.id, name: item.name, status: item.status })),
+    errorItems: errorItems.map((item) => ({ id: item.id, name: item.name, status: item.status, error: item.error })),
   };
 }
 
@@ -485,6 +561,10 @@ function findItemByUppyId(fileId) {
   }
 
   return galleryItems.value.find((entry) => entry.uppyFileId === fileId) || null;
+}
+
+function getTrackedItems() {
+  return [featuredItem.value, ...galleryItems.value].filter(Boolean);
 }
 
 function syncExistingPhotos(photos) {

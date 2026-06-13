@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -905,6 +906,14 @@ class AdminController extends Controller
     public function storeProperty(StorePropertyRequest $request, AttachPropertyImageUploadsAction $attachUploads)
     {
         $validated = $request->validated();
+        $galleryTokens = $validated['gallery_upload_tokens'] ?? [];
+
+        Log::info('Iniciando cadastro de imovel com uploads temporarios.', [
+            'user_id' => $request->user()?->id,
+            'featured_upload_present' => !empty($validated['featured_upload_token']),
+            'gallery_tokens_received' => count($galleryTokens),
+            'gallery_tokens_unique' => count(array_unique($galleryTokens)),
+        ]);
 
         $slug = $this->generateUniquePropertySlug($validated['titulo']);
         $codigoReferencia = $this->normalizeCodigoReferencia($validated['codigo_referencia'] ?? null);
@@ -934,8 +943,14 @@ class AdminController extends Controller
             $property,
             $request->user(),
             $validated['featured_upload_token'] ?? null,
-            $validated['gallery_upload_tokens'] ?? []
+            $galleryTokens
         );
+
+        Log::info('Cadastro de imovel finalizado com uploads vinculados.', [
+            'property_id' => $property->id,
+            'user_id' => $request->user()?->id,
+            'property_photos_total' => $property->photos()->count(),
+        ]);
 
         return Redirect::route('admin.properties.edit', ['property' => $property->id]);
     }
@@ -971,6 +986,15 @@ class AdminController extends Controller
     )
     {
         $validated = $request->validated();
+        $galleryTokens = $validated['gallery_upload_tokens'] ?? [];
+
+        Log::info('Iniciando atualizacao de imovel com uploads temporarios.', [
+            'property_id' => $property->id,
+            'user_id' => $request->user()?->id,
+            'featured_upload_present' => !empty($validated['featured_upload_token']),
+            'gallery_tokens_received' => count($galleryTokens),
+            'gallery_tokens_unique' => count(array_unique($galleryTokens)),
+        ]);
 
         $businessType = BusinessType::find($validated['business_type_id']);
         $valor = $this->parseBrlCurrency($validated['valor']);
@@ -1044,8 +1068,14 @@ class AdminController extends Controller
             $property,
             $request->user(),
             $validated['featured_upload_token'] ?? null,
-            $validated['gallery_upload_tokens'] ?? []
+            $galleryTokens
         );
+
+        Log::info('Atualizacao de imovel finalizada com uploads vinculados.', [
+            'property_id' => $property->id,
+            'user_id' => $request->user()?->id,
+            'property_photos_total' => $property->photos()->count(),
+        ]);
 
         return Redirect::route('admin.properties.edit', ['property' => $property->id]);
     }

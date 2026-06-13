@@ -8,6 +8,7 @@ use App\Models\PropertyImageUpload;
 use App\Models\PropertyPhoto;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class AttachPropertyImageUploadsAction
@@ -18,6 +19,8 @@ class AttachPropertyImageUploadsAction
         ?string $featuredUploadToken,
         array $galleryUploadTokens,
     ): void {
+        $rawGalleryCount = count($galleryUploadTokens);
+        $uniqueGalleryTokenCount = count(array_values(array_unique(array_filter($galleryUploadTokens))));
         $featuredUpload = $this->resolveUpload($featuredUploadToken, $user);
         $galleryUploads = collect($galleryUploadTokens)
             ->filter()
@@ -25,7 +28,18 @@ class AttachPropertyImageUploadsAction
             ->unique('id')
             ->values();
 
+        Log::info('Anexando uploads ao imovel.', [
+            'property_id' => $property->id,
+            'user_id' => $user->id,
+            'featured_upload_present' => (bool) $featuredUpload,
+            'gallery_tokens_received' => $rawGalleryCount,
+            'gallery_tokens_unique' => $uniqueGalleryTokenCount,
+            'gallery_uploads_resolved' => $galleryUploads->count(),
+        ]);
+
         DB::transaction(function () use ($property, $featuredUpload, $galleryUploads): void {
+            $createdPhotos = 0;
+
             if ($featuredUpload) {
                 $featuredPhoto = PropertyPhoto::create([
                     'property_id' => $property->id,
@@ -40,6 +54,7 @@ class AttachPropertyImageUploadsAction
                 ]);
 
                 $this->dispatchProcessJob($featuredPhoto, $featuredUpload);
+                $createdPhotos++;
             }
 
             $currentMaxOrder = (int) ($property->photos()->where('principal', false)->max('ordem') ?? 0);
@@ -57,7 +72,14 @@ class AttachPropertyImageUploadsAction
                 ]);
 
                 $this->dispatchProcessJob($photo, $upload);
+                $createdPhotos++;
             }
+
+            Log::info('Uploads anexados ao imovel com sucesso.', [
+                'property_id' => $property->id,
+                'user_id' => $user->id,
+                'property_photos_created' => $createdPhotos,
+            ]);
         });
     }
 

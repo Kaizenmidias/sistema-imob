@@ -354,12 +354,12 @@ const submit = () => {
   }
 
   if (payload.hasPendingUploads) {
-    uploadFormError.value = 'Aguarde o termino dos uploads antes de salvar o imovel.';
+    uploadFormError.value = `Aguarde o termino dos uploads antes de salvar o imovel. ${payload.uploaded_count} de ${payload.selected_count} imagens foram enviadas e ${payload.pending_count} ainda estao pendentes.`;
     return;
   }
 
   if (payload.hasUploadErrors) {
-    uploadFormError.value = 'Existem imagens com falha de envio. Reenvie ou remova antes de salvar.';
+    uploadFormError.value = `Existem ${payload.failed_count} imagens com falha de envio. Reenvie ou remova antes de salvar.`;
     return;
   }
 

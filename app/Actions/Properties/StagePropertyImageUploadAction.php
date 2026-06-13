@@ -44,11 +44,17 @@ class StagePropertyImageUploadAction
             'expires_at' => now()->addDay(),
         ]);
 
+        $pendingUploadsCount = PropertyImageUpload::query()
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['pending', 'processing'])
+            ->count();
+
         Log::info('Upload temporario de imagem criado.', [
             'upload_id' => $upload->id,
             'user_id' => $user->id,
             'mime_type' => $upload->mime_type,
             'size' => $upload->size,
+            'pending_uploads_for_user' => $pendingUploadsCount,
         ]);
 
         return $upload;
