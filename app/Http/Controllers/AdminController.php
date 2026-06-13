@@ -136,8 +136,9 @@ class AdminController extends Controller
 
     public function index(): Response
     {
-        $now = now();
-        $monthStart = $now->copy()->startOfMonth()->subMonths(11);
+        $dashboardTimezone = 'America/Sao_Paulo';
+        $nowLocal = now($dashboardTimezone);
+        $monthStart = $nowLocal->copy()->startOfMonth()->subMonths(11);
 
         $monthLabels = [];
         $monthKeys = [];
@@ -148,40 +149,33 @@ class AdminController extends Controller
             $monthCursor->addMonth();
         }
 
+        $presetRaw = trim((string) request('preset', ''));
         $startRaw = trim((string) request('start', ''));
         $endRaw = trim((string) request('end', ''));
 
-        try {
-            $rangeStart = $startRaw !== ''
-                ? Carbon::parse($startRaw)->startOfDay()
-                : $now->copy()->startOfMonth()->startOfDay();
-        } catch (\Throwable) {
-            $rangeStart = $now->copy()->startOfMonth()->startOfDay();
-        }
+        [$rangeStartLocal, $rangeEndLocal, $activePreset] = $this->resolveDashboardRange(
+            $dashboardTimezone,
+            $nowLocal,
+            $presetRaw,
+            $startRaw,
+            $endRaw
+        );
 
-        try {
-            $rangeEnd = $endRaw !== ''
-                ? Carbon::parse($endRaw)->endOfDay()
-                : $now->copy()->endOfMonth()->endOfDay();
-        } catch (\Throwable) {
-            $rangeEnd = $now->copy()->endOfMonth()->endOfDay();
-        }
+        $rangeDays = max(1, $rangeStartLocal->diffInDays($rangeEndLocal) + 1);
+        $prevEndLocal = $rangeStartLocal->copy()->subDay()->endOfDay();
+        $prevStartLocal = $prevEndLocal->copy()->subDays($rangeDays - 1)->startOfDay();
 
-        if ($rangeStart->gt($rangeEnd)) {
-            [$rangeStart, $rangeEnd] = [$rangeEnd->copy()->startOfDay(), $rangeStart->copy()->endOfDay()];
-        }
-
-        $rangeDays = max(1, $rangeStart->diffInDays($rangeEnd) + 1);
-        $prevEnd = $rangeStart->copy()->subDay()->endOfDay();
-        $prevStart = $prevEnd->copy()->subDays($rangeDays - 1)->startOfDay();
+        $rangeStart = $rangeStartLocal->copy()->utc();
+        $rangeEnd = $rangeEndLocal->copy()->utc();
+        $prevStart = $prevStartLocal->copy()->utc();
+        $prevEnd = $prevEndLocal->copy()->utc();
+        $todayStart = $nowLocal->copy()->startOfDay()->utc();
+        $todayEnd = $nowLocal->copy()->endOfDay()->utc();
 
         $hasExclusive = Schema::hasColumn('properties', 'is_exclusive');
         $hasOffMarket = Schema::hasColumn('properties', 'is_off_market');
         $hasMetaTitle = Schema::hasColumn('properties', 'meta_title');
         $hasMetaDescription = Schema::hasColumn('properties', 'meta_description');
-
-        $propertiesActive = Property::query()->where('ativo', true)->count();
-        $propertiesFeatured = Property::query()->where('ativo', true)->where('destaque', true)->count();
 
         $propertiesActiveNewInRange = Property::query()
             ->where('ativo', true)
@@ -203,32 +197,30 @@ class AdminController extends Controller
             ->whereBetween('created_at', [$prevStart, $prevEnd])
             ->count();
 
-        $leadsTotal = Lead::query()->count();
-        $leadsToday = Lead::query()->whereDate('created_at', $now->toDateString())->count();
+        $leadsToday = Lead::query()->whereBetween('created_at', [$todayStart, $todayEnd])->count();
         $leadsInRange = Lead::query()->whereBetween('created_at', [$rangeStart, $rangeEnd])->count();
         $leadsPrev = Lead::query()->whereBetween('created_at', [$prevStart, $prevEnd])->count();
 
-        $contactsTotal = Lead::query()->where('origem', 'Site - Contato')->count();
         $contactsInRange = Lead::query()->where('origem', 'Site - Contato')->whereBetween('created_at', [$rangeStart, $rangeEnd])->count();
         $contactsPrev = Lead::query()->where('origem', 'Site - Contato')->whereBetween('created_at', [$prevStart, $prevEnd])->count();
 
-        $propertyViewsTotal = $this->safeCountTable('property_views');
         $propertyViewsToday = $this->safeCountTableToday('property_views');
         $propertyViewsInRange = $this->safeCountTableBetween('property_views', $rangeStart, $rangeEnd);
         $propertyViewsPrev = $this->safeCountTableBetween('property_views', $prevStart, $prevEnd);
 
         $kpis = [
-            'properties_active' => $propertiesActive,
+            'properties_active' => $propertiesActiveNewInRange,
             'properties_active_delta' => $this->percentDelta($propertiesActiveNewInRange, $propertiesActiveNewPrev),
-            'properties_featured' => $propertiesFeatured,
+            'properties_featured' => $propertiesFeaturedNewInRange,
             'properties_featured_delta' => $this->percentDelta($propertiesFeaturedNewInRange, $propertiesFeaturedNewPrev),
-            'leads_total' => $leadsTotal,
+            'leads_total' => $leadsInRange,
             'leads_total_delta' => $this->percentDelta($leadsInRange, $leadsPrev),
             'leads_today' => $leadsToday,
-            'property_views_total' => $propertyViewsTotal,
+            'property_views_total' => $propertyViewsInRange,
             'property_views_total_delta' => $this->percentDelta($propertyViewsInRange, $propertyViewsPrev),
-            'contacts_total' => $contactsTotal,
+            'contacts_total' => $contactsInRange,
             'contacts_total_delta' => $this->percentDelta($contactsInRange, $contactsPrev),
+            'range_label' => $this->dashboardRangeLabel($activePreset),
         ];
 
         $propertyStatus = [
@@ -321,8 +313,9 @@ class AdminController extends Controller
 
         return Inertia::render('Admin/Dashboard', [
             'range' => [
-                'start' => $rangeStart->toDateString(),
-                'end' => $rangeEnd->toDateString(),
+                'start' => $rangeStartLocal->toDateString(),
+                'end' => $rangeEndLocal->toDateString(),
+                'preset' => $activePreset,
             ],
             'kpis' => $kpis,
             'propertyStatus' => $propertyStatus,
@@ -346,6 +339,69 @@ class AdminController extends Controller
         } catch (\Throwable) {
             return 0;
         }
+    }
+
+    private function resolveDashboardRange(
+        string $timezone,
+        Carbon $nowLocal,
+        string $presetRaw,
+        string $startRaw,
+        string $endRaw
+    ): array {
+        $allowedPresets = ['today', 'yesterday', 'last_7_days', 'this_month', 'this_year'];
+        $preset = in_array($presetRaw, $allowedPresets, true) ? $presetRaw : '';
+
+        if ($preset !== '') {
+            $start = $nowLocal->copy()->startOfDay();
+            $end = $nowLocal->copy()->endOfDay();
+
+            if ($preset === 'yesterday') {
+                $start->subDay()->startOfDay();
+                $end->subDay()->endOfDay();
+            } elseif ($preset === 'last_7_days') {
+                $start->subDays(6)->startOfDay();
+            } elseif ($preset === 'this_month') {
+                $start->startOfMonth()->startOfDay();
+            } elseif ($preset === 'this_year') {
+                $start->startOfYear()->startOfDay();
+            }
+
+            return [$start, $end, $preset];
+        }
+
+        try {
+            $start = $startRaw !== ''
+                ? Carbon::createFromFormat('Y-m-d', $startRaw, $timezone)->startOfDay()
+                : $nowLocal->copy()->startOfMonth()->startOfDay();
+        } catch (\Throwable) {
+            $start = $nowLocal->copy()->startOfMonth()->startOfDay();
+        }
+
+        try {
+            $end = $endRaw !== ''
+                ? Carbon::createFromFormat('Y-m-d', $endRaw, $timezone)->endOfDay()
+                : $nowLocal->copy()->endOfDay();
+        } catch (\Throwable) {
+            $end = $nowLocal->copy()->endOfDay();
+        }
+
+        if ($start->gt($end)) {
+            [$start, $end] = [$end->copy()->startOfDay(), $start->copy()->endOfDay()];
+        }
+
+        return [$start, $end, ''];
+    }
+
+    private function dashboardRangeLabel(string $preset): string
+    {
+        return match ($preset) {
+            'today' => 'hoje',
+            'yesterday' => 'ontem',
+            'last_7_days' => 'nos ultimos 7 dias',
+            'this_month' => 'neste mes',
+            'this_year' => 'neste ano',
+            default => 'no periodo selecionado',
+        };
     }
 
     private function safeCountTableToday(string $table): int

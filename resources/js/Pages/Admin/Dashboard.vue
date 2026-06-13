@@ -327,20 +327,22 @@ const props = defineProps({
 const page = usePage();
 const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 
-const rangePreset = ref('');
+const rangePreset = ref(props.range?.preset || '');
 const rangeStart = ref(props.range?.start || '');
 const rangeEnd = ref(props.range?.end || '');
 
 watch(
   () => props.range,
   (v) => {
+    rangePreset.value = v?.preset || '';
     rangeStart.value = v?.start || '';
     rangeEnd.value = v?.end || '';
   }
 );
 
 function applyRange() {
-  const payload = {};
+  rangePreset.value = '';
+  const payload = { preset: '' };
   if (rangeStart.value) payload.start = rangeStart.value;
   if (rangeEnd.value) payload.end = rangeEnd.value;
   router.get(`${adminBase.value}`, payload, { preserveState: true, preserveScroll: true });
@@ -366,7 +368,7 @@ function applyPreset() {
   if (preset === 'today') {
     rangeStart.value = formatDateInput(start);
     rangeEnd.value = formatDateInput(end);
-    applyRange();
+    router.get(`${adminBase.value}`, { preset }, { preserveState: true, preserveScroll: true });
     return;
   }
 
@@ -375,7 +377,7 @@ function applyPreset() {
     end.setDate(end.getDate() - 1);
     rangeStart.value = formatDateInput(start);
     rangeEnd.value = formatDateInput(end);
-    applyRange();
+    router.get(`${adminBase.value}`, { preset }, { preserveState: true, preserveScroll: true });
     return;
   }
 
@@ -383,7 +385,7 @@ function applyPreset() {
     start.setDate(start.getDate() - 6);
     rangeStart.value = formatDateInput(start);
     rangeEnd.value = formatDateInput(end);
-    applyRange();
+    router.get(`${adminBase.value}`, { preset }, { preserveState: true, preserveScroll: true });
     return;
   }
 
@@ -391,7 +393,7 @@ function applyPreset() {
     start.setDate(1);
     rangeStart.value = formatDateInput(start);
     rangeEnd.value = formatDateInput(end);
-    applyRange();
+    router.get(`${adminBase.value}`, { preset }, { preserveState: true, preserveScroll: true });
     return;
   }
 
@@ -399,7 +401,7 @@ function applyPreset() {
     start.setMonth(0, 1);
     rangeStart.value = formatDateInput(start);
     rangeEnd.value = formatDateInput(end);
-    applyRange();
+    router.get(`${adminBase.value}`, { preset }, { preserveState: true, preserveScroll: true });
   }
 }
 
@@ -434,18 +436,18 @@ function deltaClass(value) {
 const kpiCards = computed(() => [
   {
     key: 'properties_active',
-    title: 'Imóveis Ativos',
+    title: 'Imóveis Publicados',
     value: formatNumber(props.kpis?.properties_active),
-    subtitle: 'Total de imóveis publicados',
+    subtitle: `Publicados ${props.kpis?.range_label || 'no periodo selecionado'}`,
     delta: props.kpis?.properties_active_delta ?? null,
     icon: 'home',
     accent: 'text-blue-900',
   },
   {
     key: 'properties_featured',
-    title: 'Imóveis em Destaque',
+    title: 'Destaques Publicados',
     value: formatNumber(props.kpis?.properties_featured),
-    subtitle: 'Total de imóveis em destaque',
+    subtitle: `Destaques ${props.kpis?.range_label || 'no periodo selecionado'}`,
     delta: props.kpis?.properties_featured_delta ?? null,
     icon: 'star',
     accent: 'text-indigo-700',
@@ -454,7 +456,7 @@ const kpiCards = computed(() => [
     key: 'leads_total',
     title: 'Leads Captados',
     value: formatNumber(props.kpis?.leads_total),
-    subtitle: 'Total de leads recebidos',
+    subtitle: `Leads recebidos ${props.kpis?.range_label || 'no periodo selecionado'}`,
     delta: props.kpis?.leads_total_delta ?? null,
     icon: 'users',
     accent: 'text-emerald-700',
@@ -472,7 +474,7 @@ const kpiCards = computed(() => [
     key: 'property_views_total',
     title: 'Visualizações dos Imóveis',
     value: formatNumber(props.kpis?.property_views_total),
-    subtitle: 'Total de visualizações',
+    subtitle: `Visualizacoes ${props.kpis?.range_label || 'no periodo selecionado'}`,
     delta: props.kpis?.property_views_total_delta ?? null,
     icon: 'eye',
     accent: 'text-purple-700',
@@ -481,7 +483,7 @@ const kpiCards = computed(() => [
     key: 'contacts_total',
     title: 'Contatos Recebidos',
     value: formatNumber(props.kpis?.contacts_total),
-    subtitle: 'Total de contatos via formulários',
+    subtitle: `Contatos via formularios ${props.kpis?.range_label || 'no periodo selecionado'}`,
     delta: props.kpis?.contacts_total_delta ?? null,
     icon: 'mail',
     accent: 'text-orange-600',
