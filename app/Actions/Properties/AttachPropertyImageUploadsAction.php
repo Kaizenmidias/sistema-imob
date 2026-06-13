@@ -7,9 +7,10 @@ use App\Models\Property;
 use App\Models\PropertyImageUpload;
 use App\Models\PropertyPhoto;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class AttachPropertyImageUploadsAction
 {
@@ -19,25 +20,51 @@ class AttachPropertyImageUploadsAction
         ?string $featuredUploadToken,
         array $galleryUploadTokens,
     ): void {
+        $startedAt = microtime(true);
+        $userId = $user->id;
         $rawGalleryCount = count($galleryUploadTokens);
-        $uniqueGalleryTokenCount = count(array_values(array_unique(array_filter($galleryUploadTokens))));
-        $featuredUpload = $this->resolveUpload($featuredUploadToken, $user);
-        $galleryUploads = collect($galleryUploadTokens)
+        $normalizedGalleryTokens = collect($galleryUploadTokens)
+            ->filter(fn (mixed $token) => is_string($token) && trim($token) !== '')
+            ->map(fn (string $token) => trim($token))
+            ->values();
+        $uniqueGalleryTokens = $normalizedGalleryTokens->unique()->values();
+
+        $tokensToResolve = $uniqueGalleryTokens
+            ->when(
+                !empty($featuredUploadToken),
+                fn (Collection $collection) => $collection->prepend(trim((string) $featuredUploadToken))
+            )
             ->filter()
-            ->map(fn (string $token) => $this->resolveUpload($token, $user))
+            ->unique()
+            ->values();
+
+        $resolvedUploads = $this->resolveUploads($tokensToResolve, $userId);
+        $featuredUpload = $featuredUploadToken
+            ? $resolvedUploads->get(trim((string) $featuredUploadToken))
+            : null;
+        $galleryUploads = $uniqueGalleryTokens
+            ->map(fn (string $token) => $resolvedUploads->get($token))
+            ->filter()
             ->unique('id')
             ->values();
 
-        Log::info('Anexando uploads ao imovel.', [
+        $invalidTokens = $tokensToResolve
+            ->reject(fn (string $token) => $resolvedUploads->has($token))
+            ->values();
+
+        $this->safeInfo('Anexando uploads ao imovel.', [
             'property_id' => $property->id,
-            'user_id' => $user->id,
+            'user_id' => $userId,
             'featured_upload_present' => (bool) $featuredUpload,
             'gallery_tokens_received' => $rawGalleryCount,
-            'gallery_tokens_unique' => $uniqueGalleryTokenCount,
+            'gallery_tokens_unique' => $uniqueGalleryTokens->count(),
             'gallery_uploads_resolved' => $galleryUploads->count(),
+            'featured_token_received' => !empty($featuredUploadToken),
+            'tokens_total_to_resolve' => $tokensToResolve->count(),
+            'tokens_invalid' => $invalidTokens->all(),
         ]);
 
-        DB::transaction(function () use ($property, $featuredUpload, $galleryUploads): void {
+        $createdPhotos = DB::transaction(function () use ($property, $featuredUpload, $galleryUploads): int {
             $createdPhotos = 0;
 
             if ($featuredUpload) {
@@ -75,41 +102,50 @@ class AttachPropertyImageUploadsAction
                 $createdPhotos++;
             }
 
-            Log::info('Uploads anexados ao imovel com sucesso.', [
-                'property_id' => $property->id,
-                'user_id' => $user->id,
-                'property_photos_created' => $createdPhotos,
-            ]);
+            return $createdPhotos;
         });
+
+        $this->safeInfo('Uploads anexados ao imovel com sucesso.', [
+            'property_id' => $property->id,
+            'user_id' => auth()->id() ?? $userId,
+            'property_photos_created' => $createdPhotos,
+            'gallery_tokens_received' => $rawGalleryCount,
+            'gallery_uploads_resolved' => $galleryUploads->count(),
+            'tokens_invalid_count' => $invalidTokens->count(),
+            'tokens_invalid' => $invalidTokens->all(),
+            'processing_time_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+        ]);
     }
 
-    private function resolveUpload(?string $token, User $user): ?PropertyImageUpload
+    private function resolveUploads(Collection $tokens, int $userId): Collection
     {
-        if (!$token) {
-            return null;
+        if ($tokens->isEmpty()) {
+            return collect();
         }
 
-        $upload = PropertyImageUpload::query()
-            ->where('token', $token)
-            ->where('user_id', $user->id)
+        return PropertyImageUpload::query()
+            ->whereIn('token', $tokens->all())
+            ->where('user_id', $userId)
             ->where('status', 'pending')
             ->where(function ($query): void {
                 $query->whereNull('expires_at')
                     ->orWhere('expires_at', '>', now());
             })
-            ->first();
-
-        if (!$upload) {
-            throw ValidationException::withMessages([
-                'gallery_upload_tokens' => 'Uma ou mais imagens temporarias sao invalidas ou expiraram.',
-            ]);
-        }
-
-        return $upload;
+            ->get()
+            ->keyBy('token');
     }
 
     private function dispatchProcessJob(PropertyPhoto $photo, PropertyImageUpload $upload): void
     {
         ProcessPropertyImageJob::dispatch($photo->id, $upload->id);
+    }
+
+    private function safeInfo(string $message, array $context = []): void
+    {
+        try {
+            Log::info($message, $context);
+        } catch (Throwable) {
+            // Nao interrompe o fluxo principal se houver erro apenas no logger.
+        }
     }
 }
