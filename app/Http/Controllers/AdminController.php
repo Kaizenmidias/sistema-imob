@@ -844,7 +844,22 @@ class AdminController extends Controller
         StagePropertyImageUploadRequest $request,
         StagePropertyImageUploadAction $action
     ): JsonResponse {
+        Log::info('Request de upload temporario recebida.', [
+            'user_id' => $request->user()?->id,
+            'ip' => $request->ip(),
+            'has_session_cookie' => $request->cookies->has(config('session.cookie')),
+            'has_xsrf_cookie' => $request->cookies->has('XSRF-TOKEN'),
+            'has_x_csrf_token_header' => $request->headers->has('X-CSRF-TOKEN'),
+            'has_x_xsrf_token_header' => $request->headers->has('X-XSRF-TOKEN'),
+        ]);
+
         $upload = $action->execute($request->user(), $request->file('file'));
+
+        Log::info('Upload temporario concluido com sucesso.', [
+            'upload_id' => $upload->id,
+            'user_id' => $request->user()?->id,
+            'token' => $upload->token,
+        ]);
 
         return response()->json([
             'token' => $upload->token,

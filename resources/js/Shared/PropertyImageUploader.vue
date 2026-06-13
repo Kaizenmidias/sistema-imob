@@ -196,6 +196,8 @@ const featuredItem = ref(null);
 const galleryItems = ref([]);
 let featuredUppy = null;
 let galleryUppy = null;
+const csrfToken = typeof window.getCsrfToken === 'function' ? window.getCsrfToken() : '';
+const xsrfToken = typeof window.getCookieValue === 'function' ? window.getCookieValue('XSRF-TOKEN') : '';
 
 const TRACKED_PENDING_STATUSES = ['queued', 'uploading'];
 const TRACKED_SUCCESS_STATUSES = ['uploaded', 'processing', 'completed'];
@@ -444,6 +446,21 @@ function statusLabel(item) {
   }[item.status] || 'Pendente';
 }
 
+function formatUploadError(error, response) {
+  const statusCode = response?.status || response?.body?.status || error?.status;
+  const serverMessage = response?.body?.message || response?.body?.error || '';
+
+  if (Number(statusCode) === 419) {
+    return 'Falha de autenticacao/CSRF no upload. Recarregue a pagina e tente novamente.';
+  }
+
+  if (serverMessage) {
+    return serverMessage;
+  }
+
+  return error?.message || 'Falha ao enviar a imagem.';
+}
+
 function currentImageCount() {
   return (featuredItem.value ? 1 : 0) + galleryItems.value.length;
 }
@@ -479,8 +496,9 @@ defineExpose({
 
 function createUppy(kind) {
   const uppy = new Uppy({
-    autoProceed: true,
+    autoProceed: false,
     allowMultipleUploadBatches: true,
+    retryDelays: [0, 1000, 3000, 5000],
     restrictions: {
       allowedFileTypes: ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'],
       maxFileSize: props.maxFileSizeBytes,
@@ -493,9 +511,15 @@ function createUppy(kind) {
     method: 'post',
     fieldName: 'file',
     formData: true,
+    bundle: false,
     limit: props.parallelUploads,
+    timeout: 300000,
+    withCredentials: true,
     headers: {
       'X-Requested-With': 'XMLHttpRequest',
+      'Accept': 'application/json',
+      ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+      ...(xsrfToken ? { 'X-XSRF-TOKEN': xsrfToken } : {}),
     },
   });
 
@@ -529,7 +553,7 @@ function createUppy(kind) {
     const item = findItemByUppyId(file.id);
     if (!item) return;
     item.status = 'error';
-    item.error = response?.body?.message || error?.message || 'Falha ao enviar a imagem.';
+    item.error = formatUploadError(error, response);
   });
 
   uppy.on('restriction-failed', (file, error) => {
@@ -542,6 +566,7 @@ function createUppy(kind) {
 function addFilesToUppy(uppy, files) {
   if (!uppy) return;
 
+  let addedAtLeastOneFile = false;
   files.forEach((file) => {
     try {
       uppy.addFile({
@@ -549,10 +574,17 @@ function addFilesToUppy(uppy, files) {
         type: file.type,
         data: file,
       });
+      addedAtLeastOneFile = true;
     } catch (error) {
       uploadError.value = error?.message || 'Nao foi possivel adicionar a imagem para upload.';
     }
   });
+
+  if (addedAtLeastOneFile) {
+    uppy.upload().catch(() => {
+      // O tratamento individual ja acontece nos eventos do Uppy.
+    });
+  }
 }
 
 function findItemByUppyId(fileId) {

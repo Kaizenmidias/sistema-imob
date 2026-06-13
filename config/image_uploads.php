@@ -4,7 +4,7 @@ return [
     'max_files_per_property' => env('PROPERTY_IMAGES_MAX_FILES'),
     'max_file_size_bytes' => (int) env('PROPERTY_IMAGES_MAX_FILE_SIZE', 10 * 1024 * 1024),
     'request_max_body_hint' => (int) env('PROPERTY_IMAGES_REQUEST_MAX_BODY', 256 * 1024 * 1024),
-    'parallel_uploads' => (int) env('PROPERTY_IMAGES_PARALLEL_UPLOADS', 6),
+    'parallel_uploads' => (int) env('PROPERTY_IMAGES_PARALLEL_UPLOADS', 8),
     'poll_interval_ms' => (int) env('PROPERTY_IMAGES_POLL_INTERVAL_MS', 4000),
     'processing' => [
         'full_max_width' => 1920,
