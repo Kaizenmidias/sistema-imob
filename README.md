@@ -56,3 +56,131 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Deploy E Permissoes Em Producao
+
+Projeto em producao:
+
+- Caminho: `/www/wwwroot/meteorikahimob.com.br`
+- Dono do projeto: `lucas`
+- Usuario/grupo do webserver: `www`
+- Ownership padrao recomendado: `lucas:www`
+
+### Objetivo
+
+Manter o Laravel capaz de escrever com seguranca em:
+
+- `storage/`
+- `bootstrap/cache/`
+- `storage/framework/views`
+- `storage/framework/cache`
+- `storage/framework/sessions`
+- `storage/logs`
+- uploads temporarios
+- filas e jobs de processamento de imagem
+
+### Script Automatizado
+
+O repositório inclui o script `deploy-permissions.sh`, pensado para Ubuntu + aaPanel + NGINX + PHP-FPM.
+
+Ele faz:
+
+- corrige ownership do projeto para `lucas:www`
+- aplica permissoes seguras por padrao
+- aplica escrita com `setgid` em `storage/` e `bootstrap/cache/`
+- recria diretorios criticos do Laravel
+- limpa caches sem remover `.gitignore`
+- executa `optimize:clear`, `config:cache`, `route:cache` e `view:cache`
+- tenta reiniciar `nginx`, `php-fpm` e workers do Supervisor
+
+Uso recomendado no servidor:
+
+```bash
+cd /www/wwwroot/meteorikahimob.com.br
+chmod +x deploy-permissions.sh
+./deploy-permissions.sh
+```
+
+Se precisar rodar sem reiniciar servicos automaticamente:
+
+```bash
+SKIP_SERVICE_RESTART=1 ./deploy-permissions.sh
+```
+
+Se o grupo ja estiver sincronizado e voce quiser pular a etapa de `usermod`:
+
+```bash
+SKIP_GROUP_SYNC=1 ./deploy-permissions.sh
+```
+
+### Estrategia De Ownership E Permissoes
+
+Padrao recomendado:
+
+- projeto inteiro: `lucas:www`
+- diretorios padrao: `755`
+- arquivos padrao: `644`
+- diretorios gravaveis do Laravel: `2775`
+- arquivos em `storage/` e `bootstrap/cache/`: `664`
+
+O bit `setgid` nos diretorios gravaveis garante que novos arquivos herdem automaticamente o grupo `www`, evitando conflito entre:
+
+- `git pull`
+- `php artisan`
+- `queue:work`
+- upload/processamento de imagens
+- logs
+- caches compilados
+
+### Checklist Pos-Deploy
+
+Sequencia recomendada no servidor:
+
+```bash
+cd /www/wwwroot/meteorikahimob.com.br
+git pull origin sistema-imob
+composer install --no-dev --optimize-autoloader
+npm install
+npm run build
+php artisan migrate --force
+./deploy-permissions.sh
+```
+
+Se estiver usando worker manual da fila:
+
+```bash
+php artisan queue:work --queue=default --tries=5 --timeout=300
+```
+
+Se estiver usando Supervisor, garanta que o programa do worker rode como usuario `www` ou outro usuario compativel com o grupo `www`.
+
+### NGINX E PHP Para Uploads Grandes
+
+No NGINX do dominio:
+
+```nginx
+client_max_body_size 256M;
+client_body_timeout 300;
+proxy_connect_timeout 300;
+proxy_send_timeout 300;
+proxy_read_timeout 300;
+fastcgi_read_timeout 300;
+```
+
+No PHP:
+
+```ini
+upload_max_filesize = 256M
+post_max_size = 256M
+memory_limit = 512M
+max_execution_time = 300
+max_input_time = 300
+```
+
+### Observacoes Operacionais
+
+- Nunca use `chmod 777`
+- Evite executar `composer`, `npm` ou `artisan` como `root`
+- Prefira sempre rodar deploy como `lucas`
+- Se o script adicionar `lucas` ao grupo `www`, faca logout/login antes do proximo deploy interativo
+- Se o PHP-FPM do aaPanel nao usar um dos nomes padrao detectados pelo script, reinicie manualmente o pool configurado no painel
