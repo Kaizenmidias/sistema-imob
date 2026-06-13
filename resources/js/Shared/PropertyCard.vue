@@ -1,7 +1,7 @@
 <template>
   <div class="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow">
     <div class="relative">
-      <img :src="activePhoto" :alt="property.title" class="w-full h-56 object-cover" />
+      <img :src="activePhoto" :alt="property.title" class="w-full h-56 object-cover" loading="lazy" />
       <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
       <div class="absolute top-3 left-3 flex items-center gap-2">
         <span v-if="property.code" class="bg-black/70 text-white text-xs font-semibold px-2 py-1 rounded">

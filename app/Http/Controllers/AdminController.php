@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Properties\AttachPropertyImageUploadsAction;
+use App\Actions\Properties\StagePropertyImageUploadAction;
+use App\Http\Requests\Admin\StagePropertyImageUploadRequest;
+use App\Http\Requests\Admin\StorePropertyRequest;
+use App\Http\Requests\Admin\UpdatePropertyRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
@@ -14,6 +19,7 @@ use App\Models\BusinessType;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\Property;
+use App\Models\PropertyImageUpload;
 use App\Models\PropertyPhoto;
 use App\Models\PropertyType;
 use App\Models\SpecialCategory;
@@ -823,38 +829,46 @@ class AdminController extends Controller
             'businessTypes' => $businessTypes,
             'specialCategories' => $specialCategories,
             'generatedReferenceCode' => $generatedReferenceCode,
+            'imageUploadConfig' => [
+                'maxFiles' => (int) config('image_uploads.max_files_per_property', 50),
+                'maxFileSizeBytes' => (int) config('image_uploads.max_file_size_bytes', 20 * 1024 * 1024),
+            ],
         ]);
     }
 
-    public function storeProperty(Request $request)
-    {
-        $validated = $request->validate([
-            'titulo' => ['required', 'string', 'max:255'],
-            'codigo_referencia' => ['nullable', 'string', 'max:255'],
-            'meta_title' => ['nullable', 'string', 'max:255'],
-            'meta_description' => ['nullable', 'string'],
-            'descricao' => ['required', 'string'],
-            'tipo_propriedade_id' => ['required', 'integer', 'exists:property_types,id'],
-            'business_type_id' => ['required', 'integer', 'exists:business_types,id'],
-            'valor' => ['required', 'string'],
-            'endereco' => ['required', 'string', 'max:255'],
-            'bairro' => ['required', 'string', 'max:255'],
-            'cidade' => ['required', 'string', 'max:255'],
-            'estado' => ['required', 'string', 'size:2'],
-            'quartos' => ['nullable', 'integer', 'min:0'],
-            'banheiros' => ['nullable', 'integer', 'min:0'],
-            'garagens' => ['nullable', 'integer', 'min:0'],
-            'is_exclusive' => ['nullable', 'boolean'],
-            'is_off_market' => ['nullable', 'boolean'],
-            'show_in_home_selecao_especial' => ['nullable', 'boolean'],
-            'show_in_home_mais_procurados' => ['nullable', 'boolean'],
-            'show_in_home_visto_recentemente' => ['nullable', 'boolean'],
-            'featured_image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'gallery_images' => ['nullable', 'array'],
-            'gallery_images.*' => ['file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'special_category_ids' => ['nullable', 'array'],
-            'special_category_ids.*' => ['integer', 'exists:special_categories,id'],
+    public function stagePropertyImageUpload(
+        StagePropertyImageUploadRequest $request,
+        StagePropertyImageUploadAction $action
+    ): JsonResponse {
+        $upload = $action->execute($request->user(), $request->file('file'));
+
+        return response()->json([
+            'token' => $upload->token,
+            'name' => $upload->original_name,
+            'mime_type' => $upload->mime_type,
+            'size' => $upload->size,
+            'status' => $upload->status,
         ]);
+    }
+
+    public function destroyStagedPropertyImage(
+        string $token,
+        Request $request,
+        StagePropertyImageUploadAction $action
+    ): JsonResponse {
+        $upload = PropertyImageUpload::query()
+            ->where('token', $token)
+            ->where('user_id', $request->user()?->id)
+            ->firstOrFail();
+
+        $action->destroy($upload);
+
+        return response()->json(['deleted' => true]);
+    }
+
+    public function storeProperty(StorePropertyRequest $request, AttachPropertyImageUploadsAction $attachUploads)
+    {
+        $validated = $request->validated();
 
         $slug = $this->generateUniquePropertySlug($validated['titulo']);
         $codigoReferencia = $this->normalizeCodigoReferencia($validated['codigo_referencia'] ?? null);
@@ -866,7 +880,7 @@ class AdminController extends Controller
         $valor = $this->parseBrlCurrency($validated['valor']);
 
         $property = Property::create([
-            ...collect($validated)->except(['featured_image', 'gallery_images', 'special_category_ids'])->all(),
+            ...collect($validated)->except(['featured_upload_token', 'gallery_upload_tokens', 'special_category_ids'])->all(),
             'codigo_referencia' => $codigoReferencia,
             'slug' => $slug,
             'codigo_anuncio' => $codigoAnuncio,
@@ -880,40 +894,12 @@ class AdminController extends Controller
             $property->specialCategories()->sync($validated['special_category_ids']);
         }
 
-        $photosToCreate = [];
-        $order = 1;
-
-        if ($request->hasFile('featured_image')) {
-            $featured = $request->file('featured_image');
-            $path = Storage::disk('public')->putFile("properties/{$property->id}", $featured);
-            $url = url('/storage/' . $path);
-            $photosToCreate[] = [
-                'property_id' => $property->id,
-                'arquivo' => $path,
-                'url' => $url,
-                'principal' => true,
-                'ordem' => 0,
-            ];
-        }
-
-        if ($request->hasFile('gallery_images')) {
-            foreach ($request->file('gallery_images', []) as $file) {
-                $path = Storage::disk('public')->putFile("properties/{$property->id}", $file);
-                $url = url('/storage/' . $path);
-                $photosToCreate[] = [
-                    'property_id' => $property->id,
-                    'arquivo' => $path,
-                    'url' => $url,
-                    'principal' => false,
-                    'ordem' => $order,
-                ];
-                $order++;
-            }
-        }
-
-        if (!empty($photosToCreate)) {
-            PropertyPhoto::insert($photosToCreate);
-        }
+        $attachUploads->execute(
+            $property,
+            $request->user(),
+            $validated['featured_upload_token'] ?? null,
+            $validated['gallery_upload_tokens'] ?? []
+        );
 
         return Redirect::route('admin.properties.edit', ['property' => $property->id]);
     }
@@ -932,42 +918,20 @@ class AdminController extends Controller
             'specialCategories' => $specialCategories,
             'property' => $property,
             'selectedSpecialCategoryIds' => $property->specialCategories->pluck('id')->values(),
+            'imageUploadConfig' => [
+                'maxFiles' => (int) config('image_uploads.max_files_per_property', 50),
+                'maxFileSizeBytes' => (int) config('image_uploads.max_file_size_bytes', 20 * 1024 * 1024),
+            ],
         ]);
     }
 
-    public function updateProperty(Request $request, Property $property)
+    public function updateProperty(
+        UpdatePropertyRequest $request,
+        Property $property,
+        AttachPropertyImageUploadsAction $attachUploads
+    )
     {
-        $validated = $request->validate([
-            'titulo' => ['required', 'string', 'max:255'],
-            'codigo_referencia' => ['nullable', 'string', 'max:255'],
-            'meta_title' => ['nullable', 'string', 'max:255'],
-            'meta_description' => ['nullable', 'string'],
-            'descricao' => ['required', 'string'],
-            'tipo_propriedade_id' => ['required', 'integer', 'exists:property_types,id'],
-            'business_type_id' => ['required', 'integer', 'exists:business_types,id'],
-            'valor' => ['required', 'string'],
-            'endereco' => ['required', 'string', 'max:255'],
-            'bairro' => ['required', 'string', 'max:255'],
-            'cidade' => ['required', 'string', 'max:255'],
-            'estado' => ['required', 'string', 'size:2'],
-            'quartos' => ['nullable', 'integer', 'min:0'],
-            'banheiros' => ['nullable', 'integer', 'min:0'],
-            'garagens' => ['nullable', 'integer', 'min:0'],
-            'is_exclusive' => ['nullable', 'boolean'],
-            'is_off_market' => ['nullable', 'boolean'],
-            'show_in_home_selecao_especial' => ['nullable', 'boolean'],
-            'show_in_home_mais_procurados' => ['nullable', 'boolean'],
-            'show_in_home_visto_recentemente' => ['nullable', 'boolean'],
-            'featured_image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'gallery_images' => ['nullable', 'array'],
-            'gallery_images.*' => ['file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'remove_photo_ids' => ['nullable', 'array'],
-            'remove_photo_ids.*' => ['integer'],
-            'photo_order_ids' => ['nullable', 'array'],
-            'photo_order_ids.*' => ['integer'],
-            'special_category_ids' => ['nullable', 'array'],
-            'special_category_ids.*' => ['integer', 'exists:special_categories,id'],
-        ]);
+        $validated = $request->validated();
 
         $businessType = BusinessType::find($validated['business_type_id']);
         $valor = $this->parseBrlCurrency($validated['valor']);
@@ -978,7 +942,14 @@ class AdminController extends Controller
         }
 
         $property->fill([
-            ...collect($validated)->except(['featured_image', 'gallery_images', 'special_category_ids', 'valor'])->all(),
+            ...collect($validated)->except([
+                'featured_upload_token',
+                'gallery_upload_tokens',
+                'remove_photo_ids',
+                'photo_order_ids',
+                'special_category_ids',
+                'valor',
+            ])->all(),
             'codigo_referencia' => $codigoReferencia,
             'valor' => $valor,
             'operacao' => $this->mapBusinessTypeNameToLegacyOperacao($businessType?->name),
@@ -987,39 +958,28 @@ class AdminController extends Controller
 
         $property->specialCategories()->sync($validated['special_category_ids'] ?? []);
 
-        if ($request->hasFile('featured_image')) {
-            $existingFeatured = $property->photos()->where('principal', true)->first();
-            if ($existingFeatured) {
-                Storage::disk('public')->delete($existingFeatured->arquivo);
-                $existingFeatured->delete();
-            }
-
-            $featured = $request->file('featured_image');
-            $path = Storage::disk('public')->putFile("properties/{$property->id}", $featured);
-            $url = url('/storage/' . $path);
-            PropertyPhoto::create([
-                'property_id' => $property->id,
-                'arquivo' => $path,
-                'url' => $url,
-                'principal' => true,
-                'ordem' => 0,
-            ]);
-        }
-
         $removeIds = collect($validated['remove_photo_ids'] ?? [])
             ->map(fn ($v) => (int) $v)
             ->filter()
             ->unique()
             ->values();
 
+        if (!empty($validated['featured_upload_token'])) {
+            $featuredIds = $property->photos()->where('principal', true)->pluck('id');
+            $removeIds = $removeIds->merge($featuredIds)->unique()->values();
+        }
+
         if ($removeIds->isNotEmpty()) {
             $photosToRemove = $property->photos()
-                ->where('principal', false)
                 ->whereIn('id', $removeIds->all())
                 ->get();
 
             foreach ($photosToRemove as $photo) {
-                Storage::disk('public')->delete($photo->arquivo);
+                Storage::disk('public')->delete(array_filter([
+                    $photo->arquivo,
+                    $photo->thumb_small_path,
+                    $photo->thumb_medium_path,
+                ]));
                 $photo->delete();
             }
         }
@@ -1040,25 +1000,14 @@ class AdminController extends Controller
             }
         }
 
-        if ($request->hasFile('gallery_images')) {
-            $currentMaxOrder = (int) ($property->photos()->max('ordem') ?? 0);
-            $order = max(1, $currentMaxOrder + 1);
+        $attachUploads->execute(
+            $property,
+            $request->user(),
+            $validated['featured_upload_token'] ?? null,
+            $validated['gallery_upload_tokens'] ?? []
+        );
 
-            foreach ($request->file('gallery_images', []) as $file) {
-                $path = Storage::disk('public')->putFile("properties/{$property->id}", $file);
-                $url = url('/storage/' . $path);
-                PropertyPhoto::create([
-                    'property_id' => $property->id,
-                    'arquivo' => $path,
-                    'url' => $url,
-                    'principal' => false,
-                    'ordem' => $order,
-                ]);
-                $order++;
-            }
-        }
-
-        return Redirect::route('admin.properties');
+        return Redirect::route('admin.properties.edit', ['property' => $property->id]);
     }
 
     public function destroyProperty(Property $property)
@@ -1136,9 +1085,11 @@ class AdminController extends Controller
     private function purgeProperty(Property $property): void
     {
         foreach ($property->photos as $photo) {
-            if (!empty($photo->arquivo)) {
-                Storage::disk('public')->delete($photo->arquivo);
-            }
+            Storage::disk('public')->delete(array_filter([
+                $photo->arquivo,
+                $photo->thumb_small_path,
+                $photo->thumb_medium_path,
+            ]));
             $photo->delete();
         }
 
@@ -1166,6 +1117,8 @@ class AdminController extends Controller
         foreach ($property->photos as $photo) {
             $source = $photo->arquivo;
             $dest = null;
+            $thumbSmallDest = null;
+            $thumbMediumDest = null;
 
             if (!empty($source) && Storage::disk('public')->exists($source)) {
                 $ext = pathinfo($source, PATHINFO_EXTENSION);
@@ -1174,11 +1127,31 @@ class AdminController extends Controller
                 Storage::disk('public')->copy($source, $dest);
             }
 
+            if (!empty($photo->thumb_small_path) && Storage::disk('public')->exists($photo->thumb_small_path)) {
+                $thumbSmallDest = "properties/{$new->id}/thumb-small-" . Str::random(20) . '.webp';
+                Storage::disk('public')->copy($photo->thumb_small_path, $thumbSmallDest);
+            }
+
+            if (!empty($photo->thumb_medium_path) && Storage::disk('public')->exists($photo->thumb_medium_path)) {
+                $thumbMediumDest = "properties/{$new->id}/thumb-medium-" . Str::random(20) . '.webp';
+                Storage::disk('public')->copy($photo->thumb_medium_path, $thumbMediumDest);
+            }
+
             $path = $dest ?: $source;
             PropertyPhoto::create([
                 'property_id' => $new->id,
                 'arquivo' => $path,
-                'url' => url('/storage/' . $path),
+                'url' => $path ? Storage::disk('public')->url($path) : '',
+                'width' => $photo->width,
+                'height' => $photo->height,
+                'size' => $photo->size,
+                'mime_type' => $photo->mime_type,
+                'thumb_small_path' => $thumbSmallDest,
+                'thumb_medium_path' => $thumbMediumDest,
+                'optimized' => (bool) $photo->optimized,
+                'processed_at' => $photo->processed_at,
+                'processing_status' => $photo->processing_status,
+                'processing_error' => $photo->processing_error,
                 'principal' => (bool) $photo->principal,
                 'ordem' => (int) $photo->ordem,
             ]);

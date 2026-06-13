@@ -139,53 +139,17 @@
             <div v-if="form.errors.show_in_home_visto_recentemente" class="text-sm text-red-600 mt-1">{{ form.errors.show_in_home_visto_recentemente }}</div>
           </div>
 
-          <div>
-            <label class="block text-gray-700 mb-2 text-sm font-medium">Imagem de Destaque</label>
-            <input ref="featuredInputRef" type="file" accept="image/*" class="hidden" @change="onFeaturedSelected">
-            <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 transition cursor-pointer" @click="openFeaturedPicker">
-              <svg class="w-10 h-10 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-              </svg>
-              <p class="text-gray-600">Clique para enviar a imagem de destaque</p>
-            </div>
-            <div v-if="featuredPreviewUrl" class="mt-4">
-              <img :src="featuredPreviewUrl" alt="Imagem de destaque" class="w-full h-48 object-cover rounded-xl border border-gray-200">
-              <button type="button" class="mt-2 text-sm text-red-600 hover:text-red-800 font-medium" @click="clearFeatured">
-                Remover imagem de destaque
-              </button>
-            </div>
-            <div v-if="form.errors.featured_image" class="text-sm text-red-600 mt-1">{{ form.errors.featured_image }}</div>
-          </div>
-
-          <div>
-            <label class="block text-gray-700 mb-2 text-sm font-medium">Galeria</label>
-            <input ref="galleryInputRef" type="file" accept="image/*" multiple class="hidden" @change="onGallerySelected">
-            <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 transition cursor-pointer" @click="openGalleryPicker">
-              <svg class="w-10 h-10 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-              </svg>
-              <p class="text-gray-600">Clique para enviar imagens da galeria</p>
-            </div>
-
-            <div v-if="galleryItems.length > 0" class="mt-4 grid grid-cols-3 sm:grid-cols-4 gap-3">
-              <div
-                v-for="item in galleryItems"
-                :key="item.id"
-                class="relative border border-gray-200 rounded-lg overflow-hidden bg-white"
-                draggable="true"
-                @dragstart="onDragStart(item.id)"
-                @dragover.prevent
-                @drop="onDrop(item.id)"
-              >
-                <img :src="item.previewUrl" class="w-full h-24 object-cover">
-                <button type="button" class="absolute top-1 right-1 bg-white/90 hover:bg-white text-red-600 px-2 py-1 rounded text-xs font-semibold" @click="removeGallery(item.id)">
-                  Remover
-                </button>
-              </div>
-            </div>
-
-            <div v-if="form.errors.gallery_images" class="text-sm text-red-600 mt-1">{{ form.errors.gallery_images }}</div>
-          </div>
+          <PropertyImageUploader
+            ref="imageUploaderRef"
+            :existing-photos="property?.photos || []"
+            :upload-url="`${adminBase}/properties/uploads`"
+            :delete-upload-base-url="`${adminBase}/properties/uploads`"
+            :max-files="imageUploadConfig?.maxFiles || 50"
+            :max-file-size-bytes="imageUploadConfig?.maxFileSizeBytes || (20 * 1024 * 1024)"
+          />
+          <div v-if="form.errors.featured_upload_token" class="text-sm text-red-600 -mt-4">{{ form.errors.featured_upload_token }}</div>
+          <div v-if="form.errors.gallery_upload_tokens" class="text-sm text-red-600 -mt-4">{{ form.errors.gallery_upload_tokens }}</div>
+          <div v-if="uploadFormError" class="text-sm text-red-600 -mt-4">{{ uploadFormError }}</div>
           
           <div>
             <label class="block text-gray-700 mb-2 text-sm font-medium">Descrição</label>
@@ -224,6 +188,7 @@
 import { computed, ref } from 'vue';
 import { useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
+import PropertyImageUploader from '@/Shared/PropertyImageUploader.vue';
 
 const page = usePage();
 const adminBase = computed(() => page.props?.paths?.admin || '/admin');
@@ -252,6 +217,10 @@ const props = defineProps({
   generatedReferenceCode: {
     type: String,
     default: '',
+  },
+  imageUploadConfig: {
+    type: Object,
+    default: () => ({ maxFiles: 50, maxFileSizeBytes: 20 * 1024 * 1024 }),
   },
 });
 
@@ -286,94 +255,15 @@ const form = useForm({
   show_in_home_selecao_especial: !!props.property?.show_in_home_selecao_especial,
   show_in_home_mais_procurados: !!props.property?.show_in_home_mais_procurados,
   show_in_home_visto_recentemente: !!props.property?.show_in_home_visto_recentemente,
-  featured_image: null,
-  gallery_images: [],
+  featured_upload_token: null,
+  gallery_upload_tokens: [],
   remove_photo_ids: [],
   photo_order_ids: [],
   special_category_ids: props.selectedSpecialCategoryIds || [],
 });
 
-const featuredInputRef = ref(null);
-const featuredFile = ref(null);
-const featuredPreviewUrl = ref(props.property?.photos?.find((p) => p?.principal)?.url || '');
-
-const openFeaturedPicker = () => {
-  featuredInputRef.value?.click();
-};
-
-const clearFeatured = () => {
-  featuredFile.value = null;
-  featuredPreviewUrl.value = '';
-  if (featuredInputRef.value) featuredInputRef.value.value = '';
-};
-
-const onFeaturedSelected = (e) => {
-  const file = e.target.files?.[0] || null;
-  featuredFile.value = file;
-  featuredPreviewUrl.value = file ? URL.createObjectURL(file) : '';
-};
-
-const galleryInputRef = ref(null);
-const dragSourceId = ref(null);
-const galleryItems = ref([]);
-const removedPhotoIds = ref([]);
-
-if (isEdit.value) {
-  const existing = Array.isArray(props.property?.photos) ? props.property.photos : [];
-  galleryItems.value = existing
-    .filter((p) => !p?.principal)
-    .sort((a, b) => Number(a?.ordem ?? 0) - Number(b?.ordem ?? 0))
-    .map((p) => ({
-      id: `existing-${p.id}`,
-      existingPhotoId: p.id,
-      file: null,
-      previewUrl: p.url,
-    }));
-}
-
-const openGalleryPicker = () => {
-  galleryInputRef.value?.click();
-};
-
-const onGallerySelected = (e) => {
-  const files = Array.from(e.target.files || []);
-  for (const file of files) {
-    const id = crypto.randomUUID();
-    galleryItems.value.push({
-      id,
-      file,
-      previewUrl: URL.createObjectURL(file),
-    });
-  }
-  if (galleryInputRef.value) galleryInputRef.value.value = '';
-};
-
-const removeGallery = (id) => {
-  const item = galleryItems.value.find((x) => x.id === id);
-  if (item?.existingPhotoId) {
-    removedPhotoIds.value = Array.from(new Set([...removedPhotoIds.value, item.existingPhotoId]));
-  }
-  galleryItems.value = galleryItems.value.filter((x) => x.id !== id);
-};
-
-const onDragStart = (id) => {
-  dragSourceId.value = id;
-};
-
-const onDrop = (targetId) => {
-  const sourceId = dragSourceId.value;
-  dragSourceId.value = null;
-  if (!sourceId || sourceId === targetId) return;
-
-  const list = [...galleryItems.value];
-  const sourceIndex = list.findIndex((x) => x.id === sourceId);
-  const targetIndex = list.findIndex((x) => x.id === targetId);
-  if (sourceIndex === -1 || targetIndex === -1) return;
-
-  const [moved] = list.splice(sourceIndex, 1);
-  list.splice(targetIndex, 0, moved);
-  galleryItems.value = list;
-};
+const imageUploaderRef = ref(null);
+const uploadFormError = ref('');
 
 const formatCurrencyBRL = (value) => {
   const digits = String(value ?? '').replace(/\D/g, '');
@@ -386,12 +276,28 @@ const onPriceInput = () => {
 };
 
 const submit = () => {
-  form.featured_image = featuredFile.value;
-  form.gallery_images = galleryItems.value.filter((x) => x.file instanceof File).map((x) => x.file);
-  form.remove_photo_ids = removedPhotoIds.value;
-  form.photo_order_ids = galleryItems.value
-    .filter((x) => x.existingPhotoId && !removedPhotoIds.value.includes(x.existingPhotoId))
-    .map((x) => x.existingPhotoId);
+  uploadFormError.value = '';
+
+  const payload = imageUploaderRef.value?.getSubmissionPayload?.();
+  if (!payload) {
+    uploadFormError.value = 'Nao foi possivel preparar o envio das imagens.';
+    return;
+  }
+
+  if (payload.hasPendingUploads) {
+    uploadFormError.value = 'Aguarde o termino dos uploads antes de salvar o imovel.';
+    return;
+  }
+
+  if (payload.hasUploadErrors) {
+    uploadFormError.value = 'Existem imagens com falha de envio. Reenvie ou remova antes de salvar.';
+    return;
+  }
+
+  form.featured_upload_token = payload.featured_upload_token;
+  form.gallery_upload_tokens = payload.gallery_upload_tokens;
+  form.remove_photo_ids = payload.remove_photo_ids;
+  form.photo_order_ids = payload.photo_order_ids;
 
   if (isEdit.value) {
     form.transform((data) => ({ ...data, _method: 'put' })).post(`${adminBase.value}/properties/${props.property.id}`, { forceFormData: true });

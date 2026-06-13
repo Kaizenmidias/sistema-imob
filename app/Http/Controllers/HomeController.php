@@ -42,7 +42,7 @@ class HomeController extends Controller
             $sortedPhotos = $property->photos->sortBy('ordem');
             $photo = $sortedPhotos->firstWhere('principal', true) ?? $sortedPhotos->first();
             $photoUrls = $sortedPhotos
-                ->pluck('url')
+                ->map(fn ($item) => $item->thumb_medium_url ?: $item->url)
                 ->filter()
                 ->values()
                 ->all();
@@ -61,7 +61,7 @@ class HomeController extends Controller
                 'area' => (float) ($property->area_util ?? 0),
                 'lotArea' => (float) ($property->area_total ?? 0),
                 'type' => $property->businessType?->name ?? $property->operacao,
-                'photo' => $photo?->url,
+                'photo' => $photo?->thumb_medium_url ?: $photo?->url,
                 'photos' => $photoUrls,
             ];
         };
@@ -288,7 +288,7 @@ class HomeController extends Controller
                     ->firstWhere('principal', true) ?? $property->photos->sortBy('ordem')->first();
                 $photoUrls = $property->photos
                     ->sortBy('ordem')
-                    ->pluck('url')
+                    ->map(fn ($item) => $item->thumb_medium_url ?: $item->url)
                     ->filter()
                     ->values()
                     ->all();
@@ -309,7 +309,7 @@ class HomeController extends Controller
                     'area' => (float) ($property->area_util ?? 0),
                     'lotArea' => (float) ($property->area_total ?? 0),
                     'type' => $property->businessType?->name ?? $property->operacao,
-                    'photo' => $photo?->url,
+                    'photo' => $photo?->thumb_medium_url ?: $photo?->url,
                     'photos' => $photoUrls,
                 ];
             });
@@ -544,7 +544,12 @@ class HomeController extends Controller
 
         $photos = $propertyModel->photos
             ->sortBy('ordem')
-            ->map(fn ($p) => $p->url)
+            ->map(fn ($p) => [
+                'full' => $p->url,
+                'medium' => $p->thumb_medium_url ?: $p->url,
+                'thumb' => $p->thumb_small_url ?: $p->thumb_medium_url ?: $p->url,
+            ])
+            ->filter(fn ($p) => !empty($p['full']))
             ->values()
             ->all();
 

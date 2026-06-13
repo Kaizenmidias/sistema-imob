@@ -16,15 +16,16 @@
         <!-- Main Photo -->
         <div class="md:col-span-2 relative rounded-xl overflow-hidden shadow-lg">
           <img
-            :src="photos[activePhotoIndex]"
+            :src="activePhoto.full"
             :alt="property.title"
             class="w-full h-96 object-cover"
+            fetchpriority="high"
           />
         </div>
         <!-- Thumbnails -->
         <div class="grid grid-cols-2 gap-4">
           <div v-for="(photo, index) in photos.slice(0, 4)" :key="index" class="relative rounded-xl overflow-hidden shadow-md cursor-pointer hover:opacity-80 transition">
-            <img :src="photo" :alt="`Foto ${index + 1}`" class="w-full h-44 object-cover" @click="activePhotoIndex = index" />
+            <img :src="photo.thumb" :alt="`Foto ${index + 1}`" class="w-full h-44 object-cover" loading="lazy" @click="activePhotoIndex = index" />
             <div v-if="index === 3 && photos.length > 4" class="absolute inset-0 bg-black/70 flex items-center justify-center text-white text-2xl font-bold">
               +{{ photos.length - 4 }}
             </div>
@@ -251,8 +252,10 @@ const placeholderImage = `data:image/svg+xml,${encodeURIComponent(
 const photos = computed(() => {
   const list = props.property?.photos ?? [];
   if (Array.isArray(list) && list.length > 0) return list;
-  return [placeholderImage];
+  return [{ full: placeholderImage, medium: placeholderImage, thumb: placeholderImage }];
 });
+
+const activePhoto = computed(() => photos.value[activePhotoIndex.value] || photos.value[0]);
 
 const contactForm = useForm({
   property_id: props.property?.id ?? null,
