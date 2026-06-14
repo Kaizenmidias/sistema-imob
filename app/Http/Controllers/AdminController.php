@@ -2634,16 +2634,23 @@ class AdminController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'cover' => ['nullable', 'image', 'max:10240'],
             'is_active' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $slug = $this->uniqueSlug($validated['name'], SpecialCategory::class);
 
+        $coverPath = null;
+        if ($request->hasFile('cover')) {
+            $coverPath = Storage::disk('public')->putFile('special-categories', $request->file('cover'));
+        }
+
         SpecialCategory::create([
             'name' => $validated['name'],
             'slug' => $slug,
             'description' => $validated['description'] ?? null,
+            'cover_path' => $coverPath,
             'is_active' => $validated['is_active'] ?? true,
             'sort_order' => $validated['sort_order'] ?? 0,
         ]);
@@ -2656,16 +2663,26 @@ class AdminController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'cover' => ['nullable', 'image', 'max:10240'],
             'is_active' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $slug = $this->uniqueSlug($validated['name'], SpecialCategory::class, $specialCategory->id);
 
+        $coverPath = $specialCategory->cover_path;
+        if ($request->hasFile('cover')) {
+            if (!empty($specialCategory->cover_path)) {
+                Storage::disk('public')->delete($specialCategory->cover_path);
+            }
+            $coverPath = Storage::disk('public')->putFile('special-categories', $request->file('cover'));
+        }
+
         $specialCategory->update([
             'name' => $validated['name'],
             'slug' => $slug,
             'description' => $validated['description'] ?? null,
+            'cover_path' => $coverPath,
             'is_active' => $validated['is_active'] ?? $specialCategory->is_active,
             'sort_order' => $validated['sort_order'] ?? $specialCategory->sort_order,
         ]);
@@ -2675,6 +2692,10 @@ class AdminController extends Controller
 
     public function destroySpecialCategory(SpecialCategory $specialCategory)
     {
+        if (!empty($specialCategory->cover_path)) {
+            Storage::disk('public')->delete($specialCategory->cover_path);
+        }
+
         $specialCategory->delete();
 
         return Redirect::route('admin.special-categories');

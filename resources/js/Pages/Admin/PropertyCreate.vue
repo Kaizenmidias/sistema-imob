@@ -36,7 +36,7 @@
           
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-gray-700 mb-2 text-sm font-medium">Categoria</label>
+              <label class="block text-gray-700 mb-2 text-sm font-medium">Tipo de imóvel</label>
               <select v-model="form.tipo_propriedade_id" class="w-full border border-gray-300 rounded-lg px-4 py-3">
                 <option v-for="type in propertyTypes" :key="type.id" :value="type.id">
                   {{ type.nome_subtipo ? `${type.nome_tipo} / ${type.nome_subtipo}` : type.nome_tipo }}
@@ -144,13 +144,11 @@
           </div>
 
           <div v-if="specialCategories.length > 0">
-            <label class="block text-gray-700 mb-2 text-sm font-medium">Categorias Especiais</label>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label v-for="sc in specialCategories" :key="sc.id" class="flex items-center gap-2 text-sm text-gray-700">
-                <input v-model="form.special_category_ids" type="checkbox" :value="sc.id" class="rounded border-gray-300">
-                {{ sc.name }}
-              </label>
-            </div>
+            <label class="block text-gray-700 mb-2 text-sm font-medium">Categoria especial</label>
+            <select v-model="selectedSpecialCategoryId" class="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white">
+              <option value="">Nenhuma</option>
+              <option v-for="sc in specialCategories" :key="sc.id" :value="String(sc.id)">{{ sc.name }}</option>
+            </select>
             <div v-if="form.errors.special_category_ids" class="text-sm text-red-600 mt-1">{{ form.errors.special_category_ids }}</div>
           </div>
 
@@ -307,6 +305,16 @@ const form = useForm({
   remove_photo_ids: [],
   photo_order_ids: [],
   special_category_ids: props.selectedSpecialCategoryIds || [],
+});
+
+const selectedSpecialCategoryId = computed({
+  get: () => {
+    const firstId = Array.isArray(form.special_category_ids) ? form.special_category_ids[0] : null;
+    return firstId ? String(firstId) : '';
+  },
+  set: (value) => {
+    form.special_category_ids = value ? [Number(value)] : [];
+  },
 });
 
 const imageUploaderRef = ref(null);

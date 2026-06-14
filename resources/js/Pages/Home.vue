@@ -26,7 +26,7 @@
               </select>
             </div>
             <div>
-              <label class="block text-gray-700 text-sm font-semibold mb-1">Tipo</label>
+              <label class="block text-gray-700 text-sm font-semibold mb-1">Tipo de imóvel</label>
               <select v-model="search.property_type" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value="">Todos</option>
                 <option v-for="groupName in propertyTypeGroupNames" :key="groupName" :value="groupName">{{ groupName }}</option>
@@ -146,8 +146,42 @@
       </div>
     </section>
 
-    <!-- Categories Carousel -->
-    <CategoryCarousel />
+    <section v-if="specialCategories.length > 0" class="py-16 bg-white">
+      <div class="max-w-[1400px] mx-auto px-4">
+        <div class="flex items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-800">Categorias Especiais</h2>
+            <p class="text-gray-500 mt-1">Coleções selecionadas automaticamente pelo painel administrativo.</p>
+          </div>
+          <a href="/imoveis" class="text-sm font-semibold text-blue-900 hover:text-blue-700 transition">Ver todos os imóveis</a>
+        </div>
+        <div class="overflow-x-auto">
+          <div class="flex gap-4 pb-2">
+            <a
+              v-for="category in specialCategories"
+              :key="category.id"
+              :href="category.url"
+              class="group flex-shrink-0 w-72"
+            >
+              <div class="relative rounded-[24px] overflow-hidden shadow-lg">
+                <img :src="category.cover_url || placeholderImage" :alt="category.name" class="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500 ease-out">
+                <div class="absolute inset-0 bg-black/60 group-hover:bg-black/40 transition-colors duration-300"></div>
+                <div class="absolute inset-x-0 bottom-0 p-5 text-white">
+                  <h3 class="text-2xl font-bold">{{ category.name }}</h3>
+                  <p v-if="category.description" class="mt-2 text-sm text-white/80 line-clamp-2">{{ category.description }}</p>
+                  <div class="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
+                    Ver imóveis
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- Seleção Especial -->
     <section class="py-16 bg-white">
@@ -286,7 +320,6 @@ import { computed, reactive, ref, onMounted, onUnmounted } from 'vue';
 import { router } from '@inertiajs/vue3';
 import Layout from '@/Shared/Layout.vue';
 import PropertyCard from '@/Shared/PropertyCard.vue';
-import CategoryCarousel from '@/Shared/CategoryCarousel.vue';
 
 const props = defineProps({
   homePage: {

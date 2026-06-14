@@ -123,7 +123,15 @@ class HomeController extends Controller
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get()
+            ->map(fn (SpecialCategory $category) => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'description' => $category->description,
+                'cover_url' => $category->cover_url,
+                'url' => '/imoveis?special_category_ids[]=' . $category->id,
+            ])
+            ->values();
 
         $condominiums = Condominium::query()
             ->where('is_active', true)

@@ -46,7 +46,10 @@
               Tipos de Negócio
             </Link>
             <Link v-if="can('properties')" :href="`${adminBase}/categories/property-types`" class="block px-6 py-2 text-gray-300 hover:text-white hover:bg-gray-900 transition rounded-r">
-              Categorias
+              Tipo de Imóvel
+            </Link>
+            <Link v-if="can('properties')" :href="`${adminBase}/categories/special`" class="block px-6 py-2 text-gray-300 hover:text-white hover:bg-gray-900 transition rounded-r">
+              Categorias Especiais
             </Link>
             <Link v-if="can('properties')" :href="`${adminBase}/condominiums`" class="block px-6 py-2 text-gray-300 hover:text-white hover:bg-gray-900 transition rounded-r">
               Condomínios

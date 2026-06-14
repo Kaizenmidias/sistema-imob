@@ -45,6 +45,15 @@
           <textarea v-model="createForm.description" rows="3" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="Descrição (opcional)"></textarea>
           <div v-if="createForm.errors.description" class="text-sm text-red-600 mt-1">{{ createForm.errors.description }}</div>
         </div>
+
+        <div class="md:col-span-4">
+          <label class="block text-gray-700 mb-2 text-sm font-medium">Capa</label>
+          <input type="file" accept="image/*" class="w-full border border-gray-300 rounded-lg px-4 py-3" @change="onCreateCoverChange">
+          <div v-if="createForm.errors.cover" class="text-sm text-red-600 mt-1">{{ createForm.errors.cover }}</div>
+          <div v-if="createCoverPreview" class="mt-3">
+            <img :src="createCoverPreview" alt="Preview da capa" class="h-40 w-full max-w-sm rounded-xl object-cover border border-gray-200">
+          </div>
+        </div>
       </form>
     </div>
 
@@ -67,10 +76,16 @@
                 <div v-if="editForm.errors.name" class="text-sm text-red-600 mt-1">{{ editForm.errors.name }}</div>
                 <textarea v-model="editForm.description" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 mt-2" placeholder="Descrição"></textarea>
                 <div v-if="editForm.errors.description" class="text-sm text-red-600 mt-1">{{ editForm.errors.description }}</div>
+                <input type="file" accept="image/*" class="w-full border border-gray-300 rounded-lg px-3 py-2 mt-2" @change="onEditCoverChange">
+                <div v-if="editForm.errors.cover" class="text-sm text-red-600 mt-1">{{ editForm.errors.cover }}</div>
+                <div v-if="editCoverPreview" class="mt-2">
+                  <img :src="editCoverPreview" alt="Preview da capa" class="h-24 w-40 rounded-lg object-cover border border-gray-200">
+                </div>
               </template>
               <template v-else>
                 <div class="font-semibold text-gray-800">{{ item.name }}</div>
                 <div v-if="item.description" class="text-sm text-gray-500 mt-1">{{ item.description }}</div>
+                <img v-if="item.cover_url" :src="item.cover_url" alt="" class="mt-3 h-20 w-32 rounded-lg object-cover border border-gray-200">
               </template>
             </td>
             <td class="px-6 py-4 text-gray-600">{{ item.slug }}</td>
@@ -136,12 +151,14 @@ defineProps({
 const createForm = useForm({
   name: '',
   description: '',
+  cover: null,
   is_active: true,
   sort_order: 0,
 });
 
 const showCreate = ref(false);
 const createNameRef = ref(null);
+const createCoverPreview = ref('');
 
 const toggleCreate = async () => {
   showCreate.value = !showCreate.value;
@@ -154,14 +171,17 @@ const toggleCreate = async () => {
 const cancelCreate = () => {
   createForm.reset();
   createForm.clearErrors();
+  createCoverPreview.value = '';
   showCreate.value = false;
 };
 
 const create = () => {
   createForm.post(`${adminBase.value}/categories/special`, {
+    forceFormData: true,
     onSuccess: () => {
       createForm.reset();
       createForm.clearErrors();
+      createCoverPreview.value = '';
       showCreate.value = false;
     },
   });
@@ -171,31 +191,68 @@ const editingId = ref(null);
 const editForm = useForm({
   name: '',
   description: '',
+  cover: null,
   is_active: true,
   sort_order: 0,
 });
+const editCoverPreview = ref('');
+
+const readFilePreview = (file, callback) => {
+  if (!(file instanceof File)) {
+    callback('');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    callback(String(event.target?.result || ''));
+  };
+  reader.readAsDataURL(file);
+};
+
+const onCreateCoverChange = (event) => {
+  const file = event.target?.files?.[0] || null;
+  createForm.cover = file;
+  readFilePreview(file, (result) => {
+    createCoverPreview.value = result;
+  });
+};
+
+const onEditCoverChange = (event) => {
+  const file = event.target?.files?.[0] || null;
+  editForm.cover = file;
+  readFilePreview(file, (result) => {
+    editCoverPreview.value = result;
+  });
+};
 
 const startEdit = (item) => {
   editingId.value = item.id;
   editForm.defaults({
     name: item.name,
     description: item.description ?? '',
+    cover: null,
     is_active: item.is_active,
     sort_order: item.sort_order,
   });
   editForm.reset();
   editForm.clearErrors();
+  editCoverPreview.value = item.cover_url || '';
 };
 
 const cancelEdit = () => {
   editingId.value = null;
   editForm.reset();
   editForm.clearErrors();
+  editCoverPreview.value = '';
 };
 
 const saveEdit = () => {
   if (!editingId.value) return;
-  editForm.put(`${adminBase.value}/categories/special/${editingId.value}`, {
+  editForm
+    .transform((data) => ({ ...data, _method: 'put' }))
+    .post(`${adminBase.value}/categories/special/${editingId.value}`, {
+      forceFormData: true,
     onSuccess: () => cancelEdit(),
   });
 };

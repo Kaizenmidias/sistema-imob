@@ -4,7 +4,7 @@
 
     <div class="flex items-center justify-end mb-4">
       <button type="button" class="bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg font-semibold transition" @click="toggleCreate">
-        Nova categoria (tipo)
+        Novo tipo de imóvel
       </button>
     </div>
 
