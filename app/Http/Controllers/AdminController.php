@@ -552,7 +552,7 @@ class AdminController extends Controller
             ->map(function (Property $p) {
                 $photos = $p->relationLoaded('photos') ? $p->photos->sortBy('ordem') : collect();
                 $photo = $photos->firstWhere('principal', true) ?? $photos->first();
-                $photoUrl = $photo?->url ?: null;
+                $photoUrl = $this->propertyPhotoCardUrl($photo);
 
                 return [
                     'id' => $p->id,
@@ -596,7 +596,7 @@ class AdminController extends Controller
             ->map(function (Property $p) {
                 $photos = $p->relationLoaded('photos') ? $p->photos->sortBy('ordem') : collect();
                 $photo = $photos->firstWhere('principal', true) ?? $photos->first();
-                $photoUrl = $photo?->url ?: null;
+                $photoUrl = $this->propertyPhotoCardUrl($photo);
 
                 return [
                     'id' => $p->id,
@@ -2657,5 +2657,19 @@ class AdminController extends Controller
             $slug = $base . '-' . $suffix;
             $suffix++;
         }
+    }
+
+    private function propertyPhotoCardUrl(?PropertyPhoto $photo): ?string
+    {
+        if (!$photo) {
+            return null;
+        }
+
+        return $photo->thumb_medium_url
+            ?: $photo->medium_url
+            ?: $photo->thumb_small_url
+            ?: $photo->original_url
+            ?: $photo->url
+            ?: null;
     }
 }

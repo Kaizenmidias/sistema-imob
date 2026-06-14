@@ -15,7 +15,7 @@ return [
         'thumb_max_height' => 400,
         'webp_quality' => (int) env('PROPERTY_IMAGES_WEBP_QUALITY', 80),
     ],
-    'temporary_disk' => env('PROPERTY_IMAGES_TEMP_DISK', 'local'),
+    'temporary_disk' => env('PROPERTY_IMAGES_TEMP_DISK', 'public'),
     'temporary_directory' => 'tmp/property-images',
     'final_disk' => env('PROPERTY_IMAGES_FINAL_DISK', 'public'),
     'final_directory' => 'properties',

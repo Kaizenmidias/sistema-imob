@@ -239,8 +239,16 @@ const uploadProgressText = computed(() => {
 });
 
 function normalizeExistingItem(photo) {
-  const processing = photo?.processing_status && !['completed', 'uploaded'].includes(photo.processing_status);
   const failed = photo?.processing_status === 'failed';
+  const status = failed
+    ? 'failed'
+    : photo?.processing_status === 'processing'
+      ? 'processing'
+      : photo?.processing_status === 'pending'
+        ? 'pending'
+        : photo?.processing_status === 'completed'
+          ? 'completed'
+          : 'uploaded';
 
   return {
     id: `existing-${photo.id}`,
@@ -248,10 +256,10 @@ function normalizeExistingItem(photo) {
     existingPhotoId: photo.id,
     token: null,
     file: null,
-    previewUrl: photo.thumb_small_url || photo.url || placeholderImage,
+    previewUrl: photo.thumb_small_url || photo.medium_url || photo.original_url || photo.url || placeholderImage,
     name: photo.principal ? 'Imagem de destaque' : `Imagem ${photo.id}`,
-    status: failed ? 'failed' : (processing ? 'processing' : 'uploaded'),
-    progress: processing ? 100 : 0,
+    status,
+    progress: ['processing', 'completed'].includes(status) ? 100 : 0,
     error: photo.processing_error || '',
     isExisting: true,
   };
@@ -436,10 +444,11 @@ function onDrop(targetId) {
 
 function statusLabel(item) {
   return {
+    pending: 'Na fila de processamento',
     queued: 'Na fila para envio',
     uploading: `Enviando ${item.progress}%`,
     uploaded: 'Upload temporario concluido',
-    processing: 'Processando em background',
+    processing: 'Processando imagem',
     completed: 'Processamento concluido',
     failed: 'Falhou no processamento',
     error: 'Falha no envio',

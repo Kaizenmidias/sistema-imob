@@ -97,8 +97,14 @@
             </td>
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
-                <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
+                  <img
+                    v-if="getPropertyPreview(property)"
+                    :src="getPropertyPreview(property)"
+                    :alt="`Imagem de destaque de ${property.titulo}`"
+                    class="w-full h-full object-cover"
+                  >
+                  <svg v-else class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0 a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                   </svg>
                 </div>
@@ -123,6 +129,15 @@
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <template v-if="!isTrash">
+                  <a
+                    v-if="getPropertyPublicUrl(property)"
+                    :href="getPropertyPublicUrl(property)"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-emerald-700 hover:text-emerald-800 font-medium"
+                  >
+                    Visualizar
+                  </a>
                   <Link :href="`${adminBase}/properties/${property.id}/edit`" class="text-blue-600 hover:text-blue-800 font-medium">Editar</Link>
                   <button type="button" class="text-gray-700 hover:text-gray-900 font-medium" @click="duplicate(property.id)">Duplicar</button>
                   <button type="button" class="text-red-600 hover:text-red-800 font-medium" @click="remove(property.id)">Excluir</button>
@@ -203,6 +218,38 @@ const operationBadgeClass = (operation) => {
   if (operation === 'Comprar' || operation === 'Venda') return 'bg-green-100 text-green-700';
   if (operation === 'Alugar' || operation === 'Aluguel') return 'bg-blue-100 text-blue-700';
   return 'bg-orange-100 text-orange-700';
+};
+
+const getPrimaryPhoto = (property) => {
+  const photos = Array.isArray(property?.photos) ? [...property.photos] : [];
+  if (!photos.length) return null;
+
+  photos.sort((a, b) => {
+    if (!!a?.principal !== !!b?.principal) {
+      return a?.principal ? -1 : 1;
+    }
+
+    const orderA = Number(a?.ordem ?? 0);
+    const orderB = Number(b?.ordem ?? 0);
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+
+    return Number(a?.id ?? 0) - Number(b?.id ?? 0);
+  });
+
+  return photos[0] || null;
+};
+
+const getPropertyPreview = (property) => {
+  const photo = getPrimaryPhoto(property);
+
+  return photo?.thumb_small_url || photo?.medium_url || photo?.original_url || photo?.url || null;
+};
+
+const getPropertyPublicUrl = (property) => {
+  if (!property?.slug) return null;
+  return `/imoveis/${property.slug}`;
 };
 
 const remove = (id) => {

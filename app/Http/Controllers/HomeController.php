@@ -7,6 +7,7 @@ use Inertia\Response;
 use Illuminate\Http\Request;
 use App\Models\Property;
 use App\Models\BusinessType;
+use App\Models\PropertyPhoto;
 use App\Models\PropertyType;
 use App\Models\SpecialCategory;
 use App\Models\Setting;
@@ -42,7 +43,7 @@ class HomeController extends Controller
             $sortedPhotos = $property->photos->sortBy('ordem');
             $photo = $sortedPhotos->firstWhere('principal', true) ?? $sortedPhotos->first();
             $photoUrls = $sortedPhotos
-                ->map(fn ($item) => $item->thumb_medium_url ?: $item->url)
+                ->map(fn (PropertyPhoto $item) => $this->propertyPhotoCardUrl($item))
                 ->filter()
                 ->values()
                 ->all();
@@ -61,7 +62,7 @@ class HomeController extends Controller
                 'area' => (float) ($property->area_util ?? 0),
                 'lotArea' => (float) ($property->area_total ?? 0),
                 'type' => $property->businessType?->name ?? $property->operacao,
-                'photo' => $photo?->thumb_medium_url ?: $photo?->url,
+                'photo' => $this->propertyPhotoCardUrl($photo),
                 'photos' => $photoUrls,
             ];
         };
@@ -288,7 +289,7 @@ class HomeController extends Controller
                     ->firstWhere('principal', true) ?? $property->photos->sortBy('ordem')->first();
                 $photoUrls = $property->photos
                     ->sortBy('ordem')
-                    ->map(fn ($item) => $item->thumb_medium_url ?: $item->url)
+                    ->map(fn (PropertyPhoto $item) => $this->propertyPhotoCardUrl($item))
                     ->filter()
                     ->values()
                     ->all();
@@ -309,7 +310,7 @@ class HomeController extends Controller
                     'area' => (float) ($property->area_util ?? 0),
                     'lotArea' => (float) ($property->area_total ?? 0),
                     'type' => $property->businessType?->name ?? $property->operacao,
-                    'photo' => $photo?->thumb_medium_url ?: $photo?->url,
+                    'photo' => $this->propertyPhotoCardUrl($photo),
                     'photos' => $photoUrls,
                 ];
             });
@@ -544,10 +545,10 @@ class HomeController extends Controller
 
         $photos = $propertyModel->photos
             ->sortBy('ordem')
-            ->map(fn ($p) => [
-                'full' => $p->url,
-                'medium' => $p->thumb_medium_url ?: $p->url,
-                'thumb' => $p->thumb_small_url ?: $p->thumb_medium_url ?: $p->url,
+            ->map(fn (PropertyPhoto $p) => [
+                'full' => $p->url ?: $p->original_url ?: $p->medium_url ?: $p->thumb_small_url,
+                'medium' => $this->propertyPhotoCardUrl($p),
+                'thumb' => $p->thumb_small_url ?: $this->propertyPhotoCardUrl($p),
             ])
             ->filter(fn ($p) => !empty($p['full']))
             ->values()
@@ -729,5 +730,19 @@ class HomeController extends Controller
             return (string) $property->operacao;
         }
         return 'Venda';
+    }
+
+    private function propertyPhotoCardUrl(?PropertyPhoto $photo): ?string
+    {
+        if (!$photo) {
+            return null;
+        }
+
+        return $photo->thumb_medium_url
+            ?: $photo->medium_url
+            ?: $photo->thumb_small_url
+            ?: $photo->original_url
+            ?: $photo->url
+            ?: null;
     }
 }

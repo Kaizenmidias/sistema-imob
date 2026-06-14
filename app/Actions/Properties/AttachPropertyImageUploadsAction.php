@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class AttachPropertyImageUploadsAction
@@ -68,10 +69,11 @@ class AttachPropertyImageUploadsAction
             $createdPhotos = 0;
 
             if ($featuredUpload) {
+                $stagedPreview = $this->stagedPreview($featuredUpload);
                 $featuredPhoto = PropertyPhoto::create([
                     'property_id' => $property->id,
-                    'arquivo' => '',
-                    'url' => '',
+                    'arquivo' => $stagedPreview['path'],
+                    'url' => $stagedPreview['url'],
                     'principal' => true,
                     'ordem' => 0,
                     'size' => $featuredUpload->size,
@@ -86,10 +88,11 @@ class AttachPropertyImageUploadsAction
 
             $currentMaxOrder = (int) ($property->photos()->where('principal', false)->max('ordem') ?? 0);
             foreach ($galleryUploads as $index => $upload) {
+                $stagedPreview = $this->stagedPreview($upload);
                 $photo = PropertyPhoto::create([
                     'property_id' => $property->id,
-                    'arquivo' => '',
-                    'url' => '',
+                    'arquivo' => $stagedPreview['path'],
+                    'url' => $stagedPreview['url'],
                     'principal' => false,
                     'ordem' => $currentMaxOrder + $index + 1,
                     'size' => $upload->size,
@@ -138,6 +141,23 @@ class AttachPropertyImageUploadsAction
     private function dispatchProcessJob(PropertyPhoto $photo, PropertyImageUpload $upload): void
     {
         ProcessPropertyImageJob::dispatch($photo->id, $upload->id);
+    }
+
+    private function stagedPreview(PropertyImageUpload $upload): array
+    {
+        $finalDisk = (string) config('image_uploads.final_disk', 'public');
+        $path = $upload->disk === $finalDisk ? (string) $upload->temp_path : '';
+
+        try {
+            $url = Storage::disk($upload->disk)->url($upload->temp_path);
+        } catch (Throwable) {
+            $url = '';
+        }
+
+        return [
+            'path' => $path,
+            'url' => $url,
+        ];
     }
 
     private function safeInfo(string $message, array $context = []): void
