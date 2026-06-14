@@ -4,16 +4,18 @@
 
     <div class="bg-white rounded-xl shadow border border-gray-200 p-6 max-w-2xl">
       <div class="flex items-center gap-4 mb-6">
-        <div class="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
-          <img v-if="user?.profile_photo_url" :src="user.profile_photo_url" alt="" class="w-full h-full object-cover" />
+        <div class="w-16 h-16 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
+          <img v-if="previewUrl || user?.profile_photo_url" :src="previewUrl || user?.profile_photo_url" alt="" class="w-full h-full object-cover" />
           <span v-else class="text-sm font-semibold text-gray-600">{{ initials }}</span>
         </div>
         <div class="min-w-0">
           <div class="text-sm text-gray-500">Usuário</div>
-          <div class="font-semibold text-gray-900 truncate">{{ user?.name }}</div>
+          <div class="font-semibold text-gray-900 truncate">{{ form.name }}</div>
+          <div class="text-sm text-gray-500 truncate">{{ form.email }}</div>
         </div>
       </div>
 
+      <form @submit.prevent="save" class="space-y-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="md:col-span-2">
           <label class="block text-gray-700 mb-2 text-sm font-medium">Nome</label>
@@ -46,6 +48,12 @@
         </div>
 
         <div class="md:col-span-2">
+          <label class="block text-gray-700 mb-2 text-sm font-medium">Foto de perfil</label>
+          <input type="file" accept=".jpg,.jpeg,.png,.webp,.svg" class="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white" @change="onPhotoChange" />
+          <div v-if="form.errors.profile_photo" class="text-sm text-red-600 mt-1">{{ form.errors.profile_photo }}</div>
+        </div>
+
+        <div class="md:col-span-2">
           <label class="block text-gray-700 mb-2 text-sm font-medium">Abas do painel (acessos)</label>
           <div class="border border-gray-300 rounded-lg p-4 bg-white">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -74,21 +82,24 @@
 
       <div class="flex items-center gap-3 mt-6">
         <button
-          type="button"
+          type="submit"
           class="bg-blue-900 hover:bg-blue-800 disabled:opacity-60 text-white px-6 py-2 rounded-lg font-semibold transition"
           :disabled="form.processing"
-          @click="save"
         >
           Salvar
         </button>
+        <button type="button" class="text-gray-700 hover:text-gray-900 font-semibold" @click="reset">
+          Cancelar
+        </button>
         <Link :href="`${adminBase}/users`" class="text-gray-700 hover:text-gray-900 font-semibold">Voltar</Link>
       </div>
+      </form>
     </div>
   </AdminLayout>
 </template>
 
 <script setup>
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Shared/AdminLayout.vue';
 
@@ -100,6 +111,7 @@ const props = defineProps({
 });
 
 const user = computed(() => props.user || null);
+const previewUrl = ref(null);
 
 const initials = computed(() => {
   const name = String(user.value?.name || '').trim();
@@ -152,11 +164,44 @@ const form = useForm({
   role: user.value?.role || 'user',
   admin_enabled: !!user.value?.admin_enabled,
   permissions: initialPermissions.value,
+  profile_photo: null,
   password: '',
   password_confirmation: '',
 });
 
 const isAdminSelected = computed(() => form.role === 'admin');
+
+function onPhotoChange(event) {
+  const file = event.target?.files?.[0] || null;
+  form.profile_photo = file;
+
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value);
+    previewUrl.value = null;
+  }
+
+  if (file) {
+    previewUrl.value = URL.createObjectURL(file);
+  }
+}
+
+function reset() {
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value);
+    previewUrl.value = null;
+  }
+
+  form.reset();
+  form.clearErrors();
+  form.name = user.value?.name || '';
+  form.email = user.value?.email || '';
+  form.role = user.value?.role || 'user';
+  form.admin_enabled = !!user.value?.admin_enabled;
+  form.permissions = [...initialPermissions.value];
+  form.profile_photo = null;
+  form.password = '';
+  form.password_confirmation = '';
+}
 
 watch(
   () => form.role,
@@ -173,6 +218,21 @@ watch(
 );
 
 const save = () => {
-  form.put(`${adminBase.value}/users/${user.value.id}`, { preserveScroll: true });
+  form
+    .transform((data) => ({ ...data, _method: 'put' }))
+    .post(`${adminBase.value}/users/${user.value.id}`, {
+      forceFormData: true,
+      preserveScroll: true,
+      onSuccess: () => {
+        form.password = '';
+        form.password_confirmation = '';
+        form.profile_photo = null;
+        form.clearErrors();
+        if (previewUrl.value) {
+          URL.revokeObjectURL(previewUrl.value);
+          previewUrl.value = null;
+        }
+      },
+    });
 };
 </script>

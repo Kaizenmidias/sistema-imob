@@ -134,6 +134,9 @@ class AdminController extends Controller
         }
 
         if ($request->hasFile('profile_photo')) {
+            if (!empty($user->profile_photo_path)) {
+                Storage::disk('public')->delete($user->profile_photo_path);
+            }
             $file = $request->file('profile_photo');
             $path = Storage::disk('public')->putFile("profiles/{$user->id}", $file);
             $payload['profile_photo_path'] = $path;
@@ -141,7 +144,8 @@ class AdminController extends Controller
 
         $user->update($payload);
 
-        return Redirect::route('admin.profile');
+        return Redirect::route('admin.profile')
+            ->with('success', 'Perfil atualizado com sucesso.');
     }
 
     public function index(): Response
@@ -2284,6 +2288,7 @@ class AdminController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'role' => ['required', 'string', Rule::in(['admin', 'user'])],
             'admin_enabled' => ['required', 'boolean'],
+            'profile_photo' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,svg', 'max:4096'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['string', Rule::in($this->adminPermissionKeys())],
@@ -2308,9 +2313,17 @@ class AdminController extends Controller
             $payload['password'] = $validated['password'];
         }
 
+        if ($request->hasFile('profile_photo')) {
+            if (!empty($user->profile_photo_path)) {
+                Storage::disk('public')->delete($user->profile_photo_path);
+            }
+            $payload['profile_photo_path'] = Storage::disk('public')->putFile("profiles/{$user->id}", $request->file('profile_photo'));
+        }
+
         $user->update($payload);
 
-        return Redirect::route('admin.users');
+        return Redirect::route('admin.users')
+            ->with('success', 'Usuário atualizado com sucesso.');
     }
 
     private function adminPermissionKeys(): array

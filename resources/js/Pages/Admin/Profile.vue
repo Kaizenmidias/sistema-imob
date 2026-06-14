@@ -128,20 +128,22 @@ function reset() {
 }
 
 function save() {
-  form.put(`${adminBase.value}/profile`, {
-    forceFormData: true,
-    preserveScroll: true,
-    onSuccess: () => {
-      form.current_password = '';
-      form.password = '';
-      form.password_confirmation = '';
-      form.profile_photo = null;
-      form.clearErrors();
-      if (previewUrl.value) {
-        URL.revokeObjectURL(previewUrl.value);
-        previewUrl.value = null;
-      }
-    },
-  });
+  form
+    .transform((data) => ({ ...data, _method: 'put' }))
+    .post(`${adminBase.value}/profile`, {
+      forceFormData: true,
+      preserveScroll: true,
+      onSuccess: () => {
+        form.current_password = '';
+        form.password = '';
+        form.password_confirmation = '';
+        form.profile_photo = null;
+        form.clearErrors();
+        if (previewUrl.value) {
+          URL.revokeObjectURL(previewUrl.value);
+          previewUrl.value = null;
+        }
+      },
+    });
 }
 </script>
