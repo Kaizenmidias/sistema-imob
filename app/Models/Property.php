@@ -159,9 +159,9 @@ class Property extends Model
         if ((float) ($this->valor_locacao ?? 0) > 0) {
             $prices->push([
                 'key' => 'rent',
-                'label' => 'Locacao',
+                'label' => 'Locação',
                 'value' => (float) $this->valor_locacao,
-                'suffix' => '/mes',
+                'suffix' => '/mês',
             ]);
         }
 
@@ -170,7 +170,7 @@ class Property extends Model
                 'key' => 'default',
                 'label' => $this->primaryBusinessLabel(),
                 'value' => (float) $this->valor,
-                'suffix' => $this->primaryBusinessLabel() === 'Aluguel' ? '/mes' : '',
+                'suffix' => $this->primaryBusinessLabel() === 'Aluguel' ? '/mês' : '',
             ]);
         }
 
