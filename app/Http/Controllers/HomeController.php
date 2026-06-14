@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\Request;
+use App\Models\Condominium;
 use App\Models\Property;
 use App\Models\BusinessType;
 use App\Models\PropertyPhoto;
@@ -64,12 +65,13 @@ class HomeController extends Controller
                 'lotArea' => (float) ($property->area_total ?? 0),
                 'type' => $property->primaryBusinessLabel(),
                 'businessLabels' => $property->businessLabels(),
+                'condominium' => $property->condominium?->name,
                 'photo' => $this->propertyPhotoCardUrl($photo),
                 'photos' => $photoUrls,
             ];
         };
 
-        $baseQuery = Property::with(['photos', 'businessType'])
+        $baseQuery = Property::with(['photos', 'businessType', 'condominium'])
             ->where('ativo', true)
             ->orderByDesc('created_at');
 
@@ -123,6 +125,12 @@ class HomeController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        $condominiums = Condominium::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return Inertia::render('Home', [
             'homePage' => $homePage,
             'selecaoEspecial' => $selecaoEspecial,
@@ -134,6 +142,7 @@ class HomeController extends Controller
             'businessTypes' => $businessTypes,
             'propertyTypeGroups' => $propertyTypeGroups,
             'specialCategories' => $specialCategories,
+            'condominiums' => $condominiums,
         ]);
     }
 
@@ -166,9 +175,17 @@ class HomeController extends Controller
             ->get(['id', 'name'])
             ->values();
 
+        $condominiums = Condominium::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->values();
+
         $filters = [
             'q' => $request->string('q')->toString(),
             'business_type_id' => $request->input('business_type_id'),
+            'condominium_id' => $request->input('condominium_id'),
             'property_type' => $request->string('property_type')->toString(),
             'special_category_ids' => $request->input('special_category_ids', []),
             'price_min' => $request->input('price_min'),
@@ -185,7 +202,7 @@ class HomeController extends Controller
         ];
 
         $query = Property::query()
-            ->with(['photos', 'businessType', 'propertyType', 'specialCategories'])
+            ->with(['photos', 'businessType', 'propertyType', 'specialCategories', 'condominium'])
             ->where('ativo', true);
 
         $q = trim((string) ($filters['q'] ?? ''));
@@ -205,6 +222,11 @@ class HomeController extends Controller
         if ($businessTypeId > 0) {
             $selectedBusinessType = $businessTypes->firstWhere('id', $businessTypeId);
             $this->applyBusinessTypeFilter($query, $selectedBusinessType);
+        }
+
+        $condominiumId = (int) ($filters['condominium_id'] ?? 0);
+        if ($condominiumId > 0) {
+            $query->where('condominium_id', $condominiumId);
         }
 
         $propertyType = trim((string) ($filters['property_type'] ?? ''));
@@ -319,6 +341,7 @@ class HomeController extends Controller
                     'lotArea' => (float) ($property->area_total ?? 0),
                     'type' => $property->primaryBusinessLabel(),
                     'businessLabels' => $property->businessLabels(),
+                    'condominium' => $property->condominium?->name,
                     'photo' => $this->propertyPhotoCardUrl($photo),
                     'photos' => $photoUrls,
                 ];
@@ -330,6 +353,7 @@ class HomeController extends Controller
             'businessTypes' => $businessTypes,
             'propertyTypeGroups' => $propertyTypeGroups,
             'specialCategories' => $specialCategories,
+            'condominiums' => $condominiums,
         ]);
     }
 
@@ -526,7 +550,7 @@ class HomeController extends Controller
 
     public function showProperty(Request $request, string $slug): Response
     {
-        $propertyModel = Property::with(['propertyType', 'businessType', 'photos'])
+        $propertyModel = Property::with(['propertyType', 'businessType', 'photos', 'condominium'])
             ->where('slug', $slug)
             ->where('ativo', true)
             ->firstOrFail();
@@ -572,6 +596,7 @@ class HomeController extends Controller
             'prices' => $this->propertyPublicPrices($propertyModel),
             'type' => $propertyModel->primaryBusinessLabel(),
             'businessLabels' => $propertyModel->businessLabels(),
+            'condominium' => $propertyModel->condominium?->name,
             'propertyType' => $propertyModel->propertyType?->nome_tipo ?? '',
             'code' => $propertyModel->codigo_referencia ?: $propertyModel->codigo_anuncio,
             'bedrooms' => (int) ($propertyModel->quartos ?? 0),

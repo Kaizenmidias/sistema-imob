@@ -30,6 +30,7 @@
               </div>
               <h1 class="text-2xl font-bold text-gray-800 mb-1">{{ property.title }}</h1>
               <p class="text-gray-600">{{ property.address }}</p>
+              <p v-if="property.condominium" class="text-sm text-gray-500 mt-1">Condomínio: {{ property.condominium }}</p>
             </div>
             <div class="flex items-center gap-3">
               <button class="p-2 border border-gray-300 rounded-full hover:bg-gray-50">

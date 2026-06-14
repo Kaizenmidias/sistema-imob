@@ -73,6 +73,14 @@
               </div>
 
               <div>
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Condomínio</div>
+                <select v-model="form.condominium_id" class="w-full border border-gray-200 rounded-full px-4 py-2.5 text-sm bg-white" @change="apply">
+                  <option value="">Todos</option>
+                  <option v-for="item in condominiums" :key="item.id" :value="String(item.id)">{{ item.name }}</option>
+                </select>
+              </div>
+
+              <div>
                 <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Preço</div>
                 <div class="grid grid-cols-2 gap-3">
                   <div class="relative">
@@ -250,6 +258,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  condominiums: {
+    type: Array,
+    default: () => [],
+  },
   specialCategories: {
     type: Array,
     default: () => [],
@@ -297,6 +309,7 @@ const normalizeString = (value) => (value === null || value === undefined ? '' :
 const form = reactive({
   q: normalizeString(props.filters?.q),
   business_type_id: normalizeString(props.filters?.business_type_id),
+  condominium_id: normalizeString(props.filters?.condominium_id),
   property_type: normalizeString(props.filters?.property_type),
   special_category_ids: Array.isArray(props.filters?.special_category_ids) ? props.filters.special_category_ids.map((x) => String(x)) : [],
   price_min: normalizeString(props.filters?.price_min),
@@ -378,6 +391,7 @@ const toggleSpecialCategory = (id) => {
 const clearAll = () => {
   form.q = '';
   form.business_type_id = '';
+  form.condominium_id = '';
   form.property_type = '';
   form.special_category_ids = [];
   form.price_min = '';

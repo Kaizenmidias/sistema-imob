@@ -31,33 +31,25 @@
           <span>Dashboard</span>
         </Link>
         
-        <Link v-if="can('properties')" :href="`${adminBase}/properties`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-          </svg>
-          <span>Imóveis</span>
-        </Link>
-
-        <Link v-if="can('business_types')" :href="`${adminBase}/business-types`" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h6m6-10h2a2 2 0 012 2v4a2 2 0 01-2 2h-2m-6 0h6"></path>
-          </svg>
-          <span>Tipos de Negócio</span>
-        </Link>
-
-        <details v-if="can('properties')" class="group">
+        <details v-if="showPropertiesGroup" class="group" open>
           <summary class="flex items-center gap-3 px-6 py-3 hover:bg-gray-900 transition cursor-pointer select-none">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V7a2 2 0 00-2-2H6a2 2 0 00-2 2v6m16 0v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6m16 0H4"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
             </svg>
-            <span>Categorias</span>
+            <span>Propriedades</span>
           </summary>
           <div class="pl-14">
-            <Link :href="`${adminBase}/categories/property-types`" class="block px-6 py-2 text-gray-300 hover:text-white hover:bg-gray-900 transition rounded-r">
-              Tipos de Imóvel
+            <Link v-if="can('properties')" :href="`${adminBase}/properties`" class="block px-6 py-2 text-gray-300 hover:text-white hover:bg-gray-900 transition rounded-r">
+              Imóveis
             </Link>
-            <Link :href="`${adminBase}/categories/special`" class="block px-6 py-2 text-gray-300 hover:text-white hover:bg-gray-900 transition rounded-r">
-              Categorias Especiais
+            <Link v-if="can('business_types')" :href="`${adminBase}/business-types`" class="block px-6 py-2 text-gray-300 hover:text-white hover:bg-gray-900 transition rounded-r">
+              Tipos de Negócio
+            </Link>
+            <Link v-if="can('properties')" :href="`${adminBase}/categories/property-types`" class="block px-6 py-2 text-gray-300 hover:text-white hover:bg-gray-900 transition rounded-r">
+              Categorias
+            </Link>
+            <Link v-if="can('properties')" :href="`${adminBase}/condominiums`" class="block px-6 py-2 text-gray-300 hover:text-white hover:bg-gray-900 transition rounded-r">
+              Condomínios
             </Link>
           </div>
         </details>
@@ -194,6 +186,7 @@ const permissions = computed(() => (Array.isArray(user.value?.permissions) ? use
 const flash = computed(() => page.props?.flash || {});
 const flashType = computed(() => (flash.value?.error ? 'error' : (flash.value?.success ? 'success' : '')));
 const flashMessage = computed(() => flash.value?.error || flash.value?.success || '');
+const showPropertiesGroup = computed(() => can('properties') || can('business_types'));
 
 const isSidebarOpen = ref(false);
 

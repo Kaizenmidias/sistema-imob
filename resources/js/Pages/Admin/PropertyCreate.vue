@@ -55,6 +55,15 @@
               <div v-if="form.errors.business_type_ids" class="text-sm text-red-600 mt-1">{{ form.errors.business_type_ids }}</div>
             </div>
           </div>
+
+          <div>
+            <label class="block text-gray-700 mb-2 text-sm font-medium">Condomínio</label>
+            <select v-model="form.condominium_id" class="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white">
+              <option :value="null">Selecione um condomínio</option>
+              <option v-for="item in condominiums" :key="item.id" :value="item.id">{{ item.name }}</option>
+            </select>
+            <div v-if="form.errors.condominium_id" class="text-sm text-red-600 mt-1">{{ form.errors.condominium_id }}</div>
+          </div>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -231,6 +240,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  condominiums: {
+    type: Array,
+    default: () => [],
+  },
   specialCategories: {
     type: Array,
     default: () => [],
@@ -273,6 +286,7 @@ const form = useForm({
   meta_description: props.property?.meta_description || '',
   descricao: props.property?.descricao || '',
   tipo_propriedade_id: props.property?.tipo_propriedade_id ?? defaultPropertyTypeId.value,
+  condominium_id: props.property?.condominium_id ?? null,
   business_type_ids: defaultBusinessTypeIds.value,
   valor_venda: formatCurrencyNumberBRL(props.property?.valor_venda),
   valor_locacao: formatCurrencyNumberBRL(props.property?.valor_locacao),

@@ -74,6 +74,10 @@ Route::prefix($adminPath)->name('admin.')->middleware(['auth', EnsureCanAccessAd
     Route::post('/business-types', [AdminController::class, 'storeBusinessType'])->name('business-types.store');
     Route::put('/business-types/{businessType}', [AdminController::class, 'updateBusinessType'])->name('business-types.update');
     Route::delete('/business-types/{businessType}', [AdminController::class, 'destroyBusinessType'])->name('business-types.destroy');
+    Route::get('/condominiums', [AdminController::class, 'condominiums'])->name('condominiums');
+    Route::post('/condominiums', [AdminController::class, 'storeCondominium'])->name('condominiums.store');
+    Route::put('/condominiums/{condominium}', [AdminController::class, 'updateCondominium'])->name('condominiums.update');
+    Route::delete('/condominiums/{condominium}', [AdminController::class, 'destroyCondominium'])->name('condominiums.destroy');
     Route::get('/categories/property-types', [AdminController::class, 'propertyTypes'])->name('property-types');
     Route::post('/categories/property-types', [AdminController::class, 'storePropertyType'])->name('property-types.store');
     Route::put('/categories/property-types/{propertyType}', [AdminController::class, 'updatePropertyType'])->name('property-types.update');

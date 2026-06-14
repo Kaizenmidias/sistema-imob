@@ -19,6 +19,7 @@ use Inertia\Response;
 use App\Models\BusinessType;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
+use App\Models\Condominium;
 use App\Models\Property;
 use App\Models\PropertyImageUpload;
 use App\Models\PropertyPhoto;
@@ -814,7 +815,7 @@ class AdminController extends Controller
         $selectedPropertyTypeId = is_null($selectedPropertyTypeId) ? null : (int) $selectedPropertyTypeId;
 
         $properties = Property::query()
-            ->with(['propertyType', 'businessType', 'photos'])
+            ->with(['propertyType', 'businessType', 'condominium', 'photos'])
             ->when($selectedPropertyTypeId, fn ($q) => $q->where('tipo_propriedade_id', $selectedPropertyTypeId))
             ->orderByDesc('created_at')
             ->get();
@@ -834,7 +835,7 @@ class AdminController extends Controller
         $selectedPropertyTypeId = is_null($selectedPropertyTypeId) ? null : (int) $selectedPropertyTypeId;
 
         $properties = Property::onlyTrashed()
-            ->with(['propertyType', 'businessType', 'photos'])
+            ->with(['propertyType', 'businessType', 'condominium', 'photos'])
             ->when($selectedPropertyTypeId, fn ($q) => $q->where('tipo_propriedade_id', $selectedPropertyTypeId))
             ->orderByDesc('deleted_at')
             ->get();
@@ -851,12 +852,14 @@ class AdminController extends Controller
     {
         $propertyTypes = PropertyType::orderBy('nome_tipo')->orderBy('nome_subtipo')->get();
         $businessTypes = BusinessType::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
+        $condominiums = Condominium::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
         $specialCategories = SpecialCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
         $generatedReferenceCode = $this->generateUniqueCodigoReferencia();
 
         return Inertia::render('Admin/PropertyCreate', [
             'propertyTypes' => $propertyTypes,
             'businessTypes' => $businessTypes,
+            'condominiums' => $condominiums,
             'specialCategories' => $specialCategories,
             'generatedReferenceCode' => $generatedReferenceCode,
             'imageUploadConfig' => [
@@ -1027,15 +1030,17 @@ class AdminController extends Controller
 
     public function editProperty(Property $property): Response
     {
-        $property->load(['photos', 'specialCategories']);
+        $property->load(['photos', 'specialCategories', 'condominium']);
 
         $propertyTypes = PropertyType::orderBy('nome_tipo')->orderBy('nome_subtipo')->get();
         $businessTypes = BusinessType::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
+        $condominiums = Condominium::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
         $specialCategories = SpecialCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Admin/PropertyCreate', [
             'propertyTypes' => $propertyTypes,
             'businessTypes' => $businessTypes,
+            'condominiums' => $condominiums,
             'specialCategories' => $specialCategories,
             'property' => $property,
             'selectedSpecialCategoryIds' => $property->specialCategories->pluck('id')->values(),
@@ -2503,6 +2508,62 @@ class AdminController extends Controller
         $businessType->delete();
 
         return Redirect::route('admin.business-types');
+    }
+
+    public function condominiums(): Response
+    {
+        $items = Condominium::orderBy('sort_order')->orderBy('name')->get();
+
+        return Inertia::render('Admin/Condominiums', [
+            'items' => $items,
+        ]);
+    }
+
+    public function storeCondominium(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'is_active' => ['nullable', 'boolean'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        $slug = $this->uniqueSlug($validated['name'], Condominium::class);
+
+        Condominium::create([
+            'name' => $validated['name'],
+            'slug' => $slug,
+            'is_active' => $validated['is_active'] ?? true,
+            'sort_order' => $validated['sort_order'] ?? 0,
+        ]);
+
+        return Redirect::route('admin.condominiums');
+    }
+
+    public function updateCondominium(Request $request, Condominium $condominium)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'is_active' => ['nullable', 'boolean'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        $slug = $this->uniqueSlug($validated['name'], Condominium::class, $condominium->id);
+
+        $condominium->update([
+            'name' => $validated['name'],
+            'slug' => $slug,
+            'is_active' => $validated['is_active'] ?? $condominium->is_active,
+            'sort_order' => $validated['sort_order'] ?? $condominium->sort_order,
+        ]);
+
+        return Redirect::route('admin.condominiums');
+    }
+
+    public function destroyCondominium(Condominium $condominium)
+    {
+        $condominium->delete();
+
+        return Redirect::route('admin.condominiums');
     }
 
     public function propertyTypes(): Response

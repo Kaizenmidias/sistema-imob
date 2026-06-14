@@ -22,6 +22,7 @@ class Property extends Model
         'meta_description',
         'descricao',
         'tipo_propriedade_id',
+        'condominium_id',
         'operacao',
         'valor',
         'valor_venda',
@@ -87,6 +88,11 @@ class Property extends Model
     public function propertyType(): BelongsTo
     {
         return $this->belongsTo(PropertyType::class, 'tipo_propriedade_id');
+    }
+
+    public function condominium(): BelongsTo
+    {
+        return $this->belongsTo(Condominium::class);
     }
 
     public function specialCategories(): BelongsToMany

@@ -61,7 +61,7 @@
           </button>
 
           <div v-if="showAdvanced" class="mt-4 bg-white/95 backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-xl border border-gray-200">
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               <div class="bg-gray-50 rounded-xl p-3">
                 <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Quartos</span>
                 <div class="flex items-center justify-between mt-2">
@@ -105,6 +105,13 @@
               <div class="bg-gray-50 rounded-xl p-3">
                 <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Área Máx (m²)</span>
                 <input v-model="search.area_max" placeholder="Ilimitado" class="w-full mt-2 px-3 py-2 rounded-lg bg-white border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none" type="number" />
+              </div>
+              <div class="bg-gray-50 rounded-xl p-3 lg:col-span-2">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Condomínio</span>
+                <select v-model="search.condominium_id" class="w-full mt-2 px-3 py-2 rounded-lg bg-white border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="">Todos</option>
+                  <option v-for="item in condominiums" :key="item.id" :value="item.id">{{ item.name }}</option>
+                </select>
               </div>
             </div>
 
@@ -314,6 +321,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  condominiums: {
+    type: Array,
+    default: () => [],
+  },
   propertyTypeGroups: {
     type: Object,
     default: () => ({}),
@@ -349,6 +360,7 @@ const homeHeroOverlayOpacity = computed(() => {
 });
 
 const businessTypes = computed(() => props.businessTypes || []);
+const condominiums = computed(() => props.condominiums || []);
 const propertyTypeGroups = computed(() => props.propertyTypeGroups || {});
 const propertyTypeGroupNames = computed(() => Object.keys(propertyTypeGroups.value || {}));
 const specialCategories = computed(() => props.specialCategories || []);
@@ -356,6 +368,7 @@ const specialCategories = computed(() => props.specialCategories || []);
 const showAdvanced = ref(false);
 const search = reactive({
   business_type_id: '',
+  condominium_id: '',
   property_type: '',
   price_min: '',
   price_max: '',
@@ -411,6 +424,7 @@ const toggleSpecial = (id) => {
 const goSearch = () => {
   const params = {
     business_type_id: search.business_type_id || undefined,
+    condominium_id: search.condominium_id || undefined,
     property_type: search.property_type || undefined,
     price_min: search.price_min || undefined,
     price_max: search.price_max || undefined,

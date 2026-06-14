@@ -39,6 +39,7 @@ class StorePropertyRequest extends FormRequest
             'meta_description' => ['nullable', 'string'],
             'descricao' => ['required', 'string'],
             'tipo_propriedade_id' => ['required', 'integer', 'exists:property_types,id'],
+            'condominium_id' => ['nullable', 'integer', 'exists:condominiums,id'],
             'business_type_ids' => ['required', 'array', 'min:1'],
             'business_type_ids.*' => ['integer', 'exists:business_types,id'],
             'valor_venda' => ['nullable', 'string'],

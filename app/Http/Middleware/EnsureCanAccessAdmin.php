@@ -45,6 +45,7 @@ class EnsureCanAccessAdmin
         if (str_starts_with($routeName, 'admin.properties')) return 'properties';
         if (str_starts_with($routeName, 'admin.property-types')) return 'properties';
         if (str_starts_with($routeName, 'admin.special-categories')) return 'properties';
+        if (str_starts_with($routeName, 'admin.condominiums')) return 'properties';
 
         if (str_starts_with($routeName, 'admin.business-types')) return 'business_types';
 
