@@ -6,11 +6,14 @@ use App\Actions\Properties\AttachPropertyImageUploadsAction;
 use App\Actions\Properties\StagePropertyImageUploadAction;
 use App\Http\Requests\Admin\StagePropertyImageUploadRequest;
 use App\Http\Requests\Admin\StorePropertyRequest;
+use App\Http\Requests\Admin\UpdateProfileAvatarRequest;
+use App\Http\Requests\Admin\UpdateProfileInfoRequest;
+use App\Http\Requests\Admin\UpdateProfilePasswordRequest;
 use App\Http\Requests\Admin\UpdatePropertyRequest;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -92,60 +95,107 @@ class AdminController extends Controller
         $user = User::query()->find(Auth::id());
 
         return Inertia::render('Admin/Profile', [
-            'user' => $user ? [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'profile_photo_url' => !empty($user->profile_photo_path) ? url('/storage/' . ltrim($user->profile_photo_path, '/')) : null,
-            ] : null,
+            'user' => $user ? $this->serializeProfileUser($user) : null,
         ]);
     }
 
-    public function updateProfile(Request $request)
+    public function updateProfileInfo(UpdateProfileInfoRequest $request): JsonResponse
     {
         $user = User::query()->find(Auth::id());
         if (!$user) {
             abort(403);
         }
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
-            'profile_photo' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,svg', 'max:4096'],
-            'current_password' => ['nullable', 'string'],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+        $validated = $request->validated();
+        $emailChanged = $validated['email'] !== $user->email;
+
+        DB::transaction(function () use ($user, $validated, $emailChanged): void {
+            $payload = [
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+            ];
+
+            if ($emailChanged) {
+                $payload['email_verified_at'] = null;
+            }
+
+            $user->update($payload);
+        });
+
+        $user->refresh();
+
+        if ($emailChanged && $user instanceof MustVerifyEmail && method_exists($user, 'sendEmailVerificationNotification')) {
+            $user->sendEmailVerificationNotification();
+        }
+
+        return response()->json([
+            'message' => $emailChanged
+                ? 'Perfil atualizado com sucesso. O e-mail precisa ser verificado novamente.'
+                : 'Perfil atualizado com sucesso.',
+            'user' => $this->serializeProfileUser($user),
         ]);
+    }
 
-        if (!empty($validated['password'])) {
-            if (empty($validated['current_password']) || !Hash::check($validated['current_password'], $user->password)) {
-                return Redirect::back()->withErrors([
-                    'current_password' => 'Senha atual inválida.',
-                ]);
-            }
+    public function updateProfilePassword(UpdateProfilePasswordRequest $request): JsonResponse
+    {
+        $user = User::query()->find(Auth::id());
+        if (!$user) {
+            abort(403);
         }
 
-        $payload = [
-            'name' => $validated['name'],
-            'email' => $validated['email'],
+        $validated = $request->validated();
+
+        DB::transaction(function () use ($user, $validated): void {
+            $user->update([
+                'password' => $validated['password'],
+            ]);
+        });
+
+        Auth::logoutOtherDevices($validated['current_password']);
+
+        return response()->json([
+            'message' => 'Senha atualizada com sucesso.',
+        ]);
+    }
+
+    public function updateProfileAvatar(UpdateProfileAvatarRequest $request): JsonResponse
+    {
+        $user = User::query()->find(Auth::id());
+        if (!$user) {
+            abort(403);
+        }
+
+        $file = $request->file('profile_photo');
+        $newPath = Storage::disk('public')->putFile("profiles/{$user->id}", $file);
+        $oldPath = $user->profile_photo_path;
+
+        DB::transaction(function () use ($user, $newPath): void {
+            $user->update([
+                'profile_photo_path' => $newPath,
+            ]);
+        });
+
+        if (!empty($oldPath) && $oldPath !== $newPath) {
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $user->refresh();
+
+        return response()->json([
+            'message' => 'Avatar atualizado com sucesso.',
+            'user' => $this->serializeProfileUser($user),
+        ]);
+    }
+
+    private function serializeProfileUser(User $user): array
+    {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'email_verified_at' => $user->email_verified_at?->toISOString(),
+            'profile_photo_url' => !empty($user->profile_photo_path) ? url('/storage/' . ltrim($user->profile_photo_path, '/')) : null,
         ];
-
-        if (!empty($validated['password'])) {
-            $payload['password'] = $validated['password'];
-        }
-
-        if ($request->hasFile('profile_photo')) {
-            if (!empty($user->profile_photo_path)) {
-                Storage::disk('public')->delete($user->profile_photo_path);
-            }
-            $file = $request->file('profile_photo');
-            $path = Storage::disk('public')->putFile("profiles/{$user->id}", $file);
-            $payload['profile_photo_path'] = $path;
-        }
-
-        $user->update($payload);
-
-        return Redirect::route('admin.profile')
-            ->with('success', 'Perfil atualizado com sucesso.');
     }
 
     public function index(): Response
