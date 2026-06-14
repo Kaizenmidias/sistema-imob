@@ -85,14 +85,30 @@
         <div class="lg:col-span-1">
           <div class="bg-white rounded-2xl shadow-lg p-6 sticky top-28 border border-gray-200">
             <!-- Price & Type -->
-            <div class="flex items-center gap-3 mb-4">
-              <span class="bg-blue-900 text-white px-4 py-1 rounded-full text-sm font-bold">{{ property.type }}</span>
+            <div class="flex flex-wrap items-center gap-3 mb-4">
+              <span
+                v-for="label in businessBadges"
+                :key="label"
+                :class="label === 'ALUGUEL' ? 'bg-orange-500' : (label === 'VENDA' ? 'bg-blue-900' : 'bg-gray-700')"
+                class="text-white px-4 py-1 rounded-full text-sm font-bold"
+              >
+                {{ label }}
+              </span>
               <span class="bg-gray-100 text-gray-700 px-4 py-1 rounded-full text-sm font-semibold">{{ property.propertyType }}</span>
             </div>
 
-            <div class="text-sm text-gray-500 mb-2">VALOR DE VENDA</div>
-            <div class="text-4xl font-bold text-blue-900 mb-6">
-              R$ {{ formatPrice(property.price) }}
+            <div class="space-y-3 mb-6">
+              <div v-for="row in priceRows" :key="row.key" class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
+                <div :class="row.key === 'rent' ? 'text-orange-700' : 'text-blue-900'" class="text-sm font-semibold uppercase tracking-[0.18em]">
+                  {{ row.label }}
+                </div>
+                <div :class="row.key === 'rent' ? 'text-orange-700' : 'text-blue-900'" class="mt-2 text-4xl font-bold">
+                  {{ formatCurrencyBRL(row.value) }}<span v-if="row.suffix" class="text-2xl">{{ row.suffix }}</span>
+                </div>
+              </div>
+              <div v-if="priceRows.length === 0" class="rounded-2xl border border-dashed border-gray-200 px-4 py-4 text-gray-400">
+                Consulte valores
+              </div>
             </div>
 
             <!-- Costs -->
@@ -235,6 +251,43 @@ const photos = computed(() => {
   return [{ full: placeholderImage, medium: placeholderImage, thumb: placeholderImage }];
 });
 
+const businessBadges = computed(() => {
+  const labels = Array.isArray(props.property?.businessLabels) ? props.property.businessLabels : [];
+
+  if (labels.length > 0) {
+    return labels.map((label) => {
+      if (label === 'Comprar') return 'VENDA';
+      if (label === 'Alugar' || label === 'Aluguel') return 'ALUGUEL';
+      return String(label || '').toUpperCase();
+    });
+  }
+
+  if (props.property?.type) {
+    return [String(props.property.type).toUpperCase()];
+  }
+
+  return [];
+});
+
+const priceRows = computed(() => {
+  const rows = Array.isArray(props.property?.prices) ? props.property.prices.filter((row) => Number(row?.value || 0) > 0) : [];
+
+  if (rows.length > 0) {
+    return rows;
+  }
+
+  if (Number(props.property?.price || 0) > 0) {
+    return [{
+      key: 'default',
+      label: String(props.property?.type || 'Valor'),
+      value: props.property.price,
+      suffix: String(props.property?.type || '').toLowerCase().includes('alugu') ? '/mês' : '',
+    }];
+  }
+
+  return [];
+});
+
 const contactForm = useForm({
   property_id: props.property?.id ?? null,
   nome: '',
@@ -247,6 +300,10 @@ const contactForm = useForm({
 function formatPrice(value) {
   if (!value) return '0';
   return value.toLocaleString('pt-BR', { minimumFractionDigits: 0 });
+}
+
+function formatCurrencyBRL(value) {
+  return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 function submitContact() {

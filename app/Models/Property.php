@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 class Property extends Model
 {
@@ -23,6 +24,8 @@ class Property extends Model
         'tipo_propriedade_id',
         'operacao',
         'valor',
+        'valor_venda',
+        'valor_locacao',
         'moeda',
         'endereco',
         'numero',
@@ -52,6 +55,9 @@ class Property extends Model
         'ativo',
         'data_modificacao_xml',
         'business_type_id',
+        'aceita_venda',
+        'aceita_locacao',
+        'aceita_temporada',
     ];
 
     protected function casts(): array
@@ -64,6 +70,12 @@ class Property extends Model
             'show_in_home_selecao_especial' => 'boolean',
             'show_in_home_mais_procurados' => 'boolean',
             'show_in_home_visto_recentemente' => 'boolean',
+            'aceita_venda' => 'boolean',
+            'aceita_locacao' => 'boolean',
+            'aceita_temporada' => 'boolean',
+            'valor' => 'float',
+            'valor_venda' => 'float',
+            'valor_locacao' => 'float',
         ];
     }
 
@@ -95,5 +107,67 @@ class Property extends Model
     public function leads(): HasMany
     {
         return $this->hasMany(Lead::class);
+    }
+
+    public function businessLabels(): array
+    {
+        $labels = [];
+
+        if ($this->aceita_venda) {
+            $labels[] = 'Venda';
+        }
+
+        if ($this->aceita_locacao) {
+            $labels[] = 'Aluguel';
+        }
+
+        if ($this->aceita_temporada) {
+            $labels[] = 'Temporada';
+        }
+
+        if ($labels === [] && !empty($this->operacao)) {
+            $labels[] = (string) $this->operacao;
+        }
+
+        return $labels;
+    }
+
+    public function primaryBusinessLabel(): string
+    {
+        return $this->businessLabels()[0] ?? 'Venda';
+    }
+
+    public function publicPrices(): Collection
+    {
+        $prices = collect();
+
+        if ((float) ($this->valor_venda ?? 0) > 0) {
+            $prices->push([
+                'key' => 'sale',
+                'label' => 'Venda',
+                'value' => (float) $this->valor_venda,
+                'suffix' => '',
+            ]);
+        }
+
+        if ((float) ($this->valor_locacao ?? 0) > 0) {
+            $prices->push([
+                'key' => 'rent',
+                'label' => 'Locacao',
+                'value' => (float) $this->valor_locacao,
+                'suffix' => '/mes',
+            ]);
+        }
+
+        if ($prices->isEmpty() && (float) ($this->valor ?? 0) > 0) {
+            $prices->push([
+                'key' => 'default',
+                'label' => $this->primaryBusinessLabel(),
+                'value' => (float) $this->valor,
+                'suffix' => $this->primaryBusinessLabel() === 'Aluguel' ? '/mes' : '',
+            ]);
+        }
+
+        return $prices;
     }
 }

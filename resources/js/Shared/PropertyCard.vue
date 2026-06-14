@@ -7,8 +7,13 @@
         <span v-if="property.code" class="bg-black/70 text-white text-xs font-semibold px-2 py-1 rounded">
           {{ property.code }}
         </span>
-        <span :class="badgeClass" class="text-white text-xs font-semibold px-2 py-1 rounded">
-          {{ badgeLabel }}
+        <span
+          v-for="label in businessBadges"
+          :key="label"
+          :class="badgeClass(label)"
+          class="text-white text-xs font-semibold px-2 py-1 rounded"
+        >
+          {{ label }}
         </span>
       </div>
       <button type="button" class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center">
@@ -59,10 +64,6 @@
       <h3 class="mt-2 text-lg font-semibold text-gray-900 leading-snug">{{ property.title || 'Imóvel' }}</h3>
 
       <div class="mt-3 flex items-center gap-4 text-xs text-gray-600 flex-wrap">
-        <span class="inline-flex items-center gap-1 text-red-600 font-semibold">
-          <span>R$</span>
-          <span>{{ formatPriceShort(property.price) }}</span>
-        </span>
         <span class="inline-flex items-center gap-1">
           <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
@@ -89,8 +90,18 @@
         </span>
       </div>
 
-      <div class="mt-4 text-xl font-bold text-blue-900">
-        {{ formatCurrencyBRL(property.price) }}<span v-if="isRent" class="text-orange-600">/mês</span>
+      <div class="mt-4 space-y-2 border-t border-gray-100 pt-4">
+        <div v-for="row in priceRows" :key="row.key" class="flex items-center justify-between gap-3">
+          <span :class="row.key === 'rent' ? 'bg-orange-50 text-orange-700' : 'bg-blue-50 text-blue-700'" class="rounded-md px-2 py-1 text-xs font-semibold uppercase tracking-wide">
+            {{ row.label }}
+          </span>
+          <span :class="row.key === 'rent' ? 'text-orange-700' : 'text-blue-900'" class="text-xl font-bold text-right">
+            {{ formatCurrencyBRL(row.value) }}<span v-if="row.suffix">{{ row.suffix }}</span>
+          </span>
+        </div>
+        <div v-if="priceRows.length === 0" class="text-sm font-medium text-gray-400">
+          Consulte valores
+        </div>
       </div>
     </div>
   </div>
@@ -141,33 +152,48 @@ const nextPhoto = () => {
   activePhotoIndex.value = (activePhotoIndex.value + 1) % n;
 };
 
-const isRent = computed(() => {
-  const type = String(props.property?.type || '').toLowerCase();
-  return type.includes('alug') || type.includes('loca');
+const businessBadges = computed(() => {
+  const labels = Array.isArray(props.property?.businessLabels) ? [...props.property.businessLabels] : [];
+  if (!labels.length && props.property?.type) {
+    labels.push(props.property.type);
+  }
+
+  return labels.map((label) => {
+    if (label === 'Comprar') return 'VENDA';
+    if (label === 'Alugar') return 'ALUGUEL';
+    if (label === 'Aluguel') return 'ALUGUEL';
+    return String(label || '').toUpperCase();
+  });
 });
 
-const badgeLabel = computed(() => {
-  const type = String(props.property?.type || '');
-  if (type === 'Comprar' || type === 'Venda') return 'VENDA';
-  if (type === 'Alugar' || type === 'Aluguel') return 'ALUGUEL';
-  if (type) return type.toUpperCase();
-  return 'VENDA';
+const priceRows = computed(() => {
+  const rows = Array.isArray(props.property?.prices) ? props.property.prices.filter((row) => Number(row?.value || 0) > 0) : [];
+
+  if (rows.length) {
+    return rows;
+  }
+
+  if (Number(props.property?.price || 0) > 0) {
+    return [{
+      key: 'default',
+      label: String(props.property?.type || 'Valor'),
+      value: props.property.price,
+      suffix: String(props.property?.type || '').toLowerCase().includes('alugu') ? '/mês' : '',
+    }];
+  }
+
+  return [];
 });
 
-const badgeClass = computed(() => {
-  if (badgeLabel.value === 'ALUGUEL') return 'bg-orange-500';
-  if (badgeLabel.value === 'VENDA') return 'bg-blue-700';
+const badgeClass = (label) => {
+  if (label === 'ALUGUEL') return 'bg-orange-500';
+  if (label === 'VENDA') return 'bg-blue-700';
   return 'bg-gray-700';
-});
+};
 
 const formatCurrencyBRL = (price) => {
   const value = Number(price || 0);
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-};
-
-const formatPriceShort = (price) => {
-  const value = Number(price || 0);
-  return value.toLocaleString('pt-BR', { maximumFractionDigits: 0, minimumFractionDigits: 0 });
 };
 
 const formatArea = (value) => {

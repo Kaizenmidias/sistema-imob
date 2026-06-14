@@ -116,11 +116,25 @@
             </td>
             <td class="px-6 py-4 text-gray-600">{{ property.propertyType?.nome_tipo || '-' }}</td>
             <td class="px-6 py-4">
-              <span :class="operationBadgeClass(property.businessType?.name || property.operacao)" class="px-3 py-1 rounded-full text-xs font-semibold">
-                {{ property.businessType?.name || property.operacao }}
-              </span>
+              <div class="flex flex-wrap gap-2">
+                <span
+                  v-for="label in getBusinessLabels(property)"
+                  :key="label"
+                  :class="operationBadgeClass(label)"
+                  class="px-3 py-1 rounded-full text-xs font-semibold"
+                >
+                  {{ label }}
+                </span>
+              </div>
             </td>
-            <td class="px-6 py-4 font-semibold text-gray-800">R$ {{ formatPrice(property.valor) }}</td>
+            <td class="px-6 py-4">
+              <div v-if="getPriceRows(property).length > 0" class="space-y-1">
+                <div v-for="row in getPriceRows(property)" :key="row.key" class="font-semibold text-gray-800">
+                  {{ row.label }}: R$ {{ formatPrice(row.value) }}<span v-if="row.suffix">{{ row.suffix }}</span>
+                </div>
+              </div>
+              <span v-else class="text-gray-400">-</span>
+            </td>
             <td class="px-6 py-4">
               <span :class="property.ativo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-3 py-1 rounded-full text-xs font-semibold">
                 {{ property.ativo ? 'Ativo' : 'Inativo' }}
@@ -218,6 +232,40 @@ const operationBadgeClass = (operation) => {
   if (operation === 'Comprar' || operation === 'Venda') return 'bg-green-100 text-green-700';
   if (operation === 'Alugar' || operation === 'Aluguel') return 'bg-blue-100 text-blue-700';
   return 'bg-orange-100 text-orange-700';
+};
+
+const getBusinessLabels = (property) => {
+  const labels = [];
+  if (property?.aceita_venda) labels.push('Venda');
+  if (property?.aceita_locacao) labels.push('Aluguel');
+  if (property?.aceita_temporada) labels.push('Temporada');
+  if (!labels.length && (property?.businessType?.name || property?.operacao)) {
+    labels.push(property?.businessType?.name || property?.operacao);
+  }
+  return labels;
+};
+
+const getPriceRows = (property) => {
+  const rows = [];
+
+  if (Number(property?.valor_venda || 0) > 0) {
+    rows.push({ key: 'sale', label: 'Venda', value: property.valor_venda, suffix: '' });
+  }
+
+  if (Number(property?.valor_locacao || 0) > 0) {
+    rows.push({ key: 'rent', label: 'Locacao', value: property.valor_locacao, suffix: '/mes' });
+  }
+
+  if (!rows.length && Number(property?.valor || 0) > 0) {
+    rows.push({
+      key: 'legacy',
+      label: getBusinessLabels(property)[0] || 'Valor',
+      value: property.valor,
+      suffix: (getBusinessLabels(property)[0] || '') === 'Aluguel' ? '/mes' : '',
+    });
+  }
+
+  return rows;
 };
 
 const getPrimaryPhoto = (property) => {

@@ -46,17 +46,27 @@
             </div>
             <div>
               <label class="block text-gray-700 mb-2 text-sm font-medium">Negócio</label>
-              <select v-model="form.business_type_id" class="w-full border border-gray-300 rounded-lg px-4 py-3">
-                <option v-for="bt in businessTypes" :key="bt.id" :value="bt.id">{{ bt.name }}</option>
-              </select>
-              <div v-if="form.errors.business_type_id" class="text-sm text-red-600 mt-1">{{ form.errors.business_type_id }}</div>
+              <div class="rounded-lg border border-gray-300 px-4 py-3 space-y-3">
+                <label v-for="bt in businessTypes" :key="bt.id" class="flex items-center gap-3 text-sm text-gray-700">
+                  <input v-model="form.business_type_ids" type="checkbox" :value="bt.id" class="rounded border-gray-300">
+                  <span>{{ businessTypeLabel(bt.name) }}</span>
+                </label>
+              </div>
+              <div v-if="form.errors.business_type_ids" class="text-sm text-red-600 mt-1">{{ form.errors.business_type_ids }}</div>
             </div>
           </div>
           
-          <div>
-            <label class="block text-gray-700 mb-2 text-sm font-medium">Preço</label>
-            <input v-model="form.valor" type="text" inputmode="numeric" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="R$ 0.000,00" @input="onPriceInput">
-            <div v-if="form.errors.valor" class="text-sm text-red-600 mt-1">{{ form.errors.valor }}</div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-gray-700 mb-2 text-sm font-medium">Valor de venda</label>
+              <input v-model="form.valor_venda" type="text" inputmode="numeric" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="R$ 0,00" @input="onSalePriceInput">
+              <div v-if="form.errors.valor_venda" class="text-sm text-red-600 mt-1">{{ form.errors.valor_venda }}</div>
+            </div>
+            <div>
+              <label class="block text-gray-700 mb-2 text-sm font-medium">Valor de locação</label>
+              <input v-model="form.valor_locacao" type="text" inputmode="numeric" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="R$ 0,00" @input="onRentPriceInput">
+              <div v-if="form.errors.valor_locacao" class="text-sm text-red-600 mt-1">{{ form.errors.valor_locacao }}</div>
+            </div>
           </div>
           
           <div>
@@ -246,7 +256,10 @@ const props = defineProps({
 const isEdit = computed(() => !!props.property?.id);
 
 const defaultPropertyTypeId = computed(() => props.propertyTypes[0]?.id ?? null);
-const defaultBusinessTypeId = computed(() => props.businessTypes[0]?.id ?? null);
+const defaultBusinessTypeIds = computed(() => {
+  const ids = getInitialBusinessTypeIds(props.property, props.businessTypes);
+  return ids.length > 0 ? ids : (props.businessTypes[0]?.id ? [props.businessTypes[0].id] : []);
+});
 
 const formatCurrencyNumberBRL = (value) => {
   const number = Number(value || 0);
@@ -260,8 +273,9 @@ const form = useForm({
   meta_description: props.property?.meta_description || '',
   descricao: props.property?.descricao || '',
   tipo_propriedade_id: props.property?.tipo_propriedade_id ?? defaultPropertyTypeId.value,
-  business_type_id: props.property?.business_type_id ?? defaultBusinessTypeId.value,
-  valor: isEdit.value ? formatCurrencyNumberBRL(props.property?.valor) : 'R$ 0,00',
+  business_type_ids: defaultBusinessTypeIds.value,
+  valor_venda: formatCurrencyNumberBRL(props.property?.valor_venda),
+  valor_locacao: formatCurrencyNumberBRL(props.property?.valor_locacao),
   endereco: props.property?.endereco || '',
   bairro: props.property?.bairro || '',
   cidade: props.property?.cidade || '',
@@ -299,6 +313,38 @@ const formatCurrencyBRL = (value) => {
   return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
 
+function getInitialBusinessTypeIds(property, businessTypes) {
+  const ids = [];
+  const findTypeId = (targetName) => businessTypes.find((type) => String(type?.name || '').toLowerCase() === targetName)?.id;
+
+  if (property?.aceita_venda) {
+    const saleId = findTypeId('comprar');
+    if (saleId) ids.push(saleId);
+  }
+
+  if (property?.aceita_locacao) {
+    const rentId = findTypeId('alugar');
+    if (rentId) ids.push(rentId);
+  }
+
+  if (property?.aceita_temporada) {
+    const seasonId = findTypeId('temporada');
+    if (seasonId) ids.push(seasonId);
+  }
+
+  if (ids.length === 0 && property?.business_type_id) {
+    ids.push(property.business_type_id);
+  }
+
+  return [...new Set(ids)];
+}
+
+const businessTypeLabel = (name) => {
+  if (name === 'Comprar') return 'Compra';
+  if (name === 'Alugar') return 'Aluguel';
+  return name;
+};
+
 const showProcessingBanner = computed(() => isEdit.value && processingCounts.value.total > 0 && (processingCounts.value.pending > 0 || processingCounts.value.processing > 0 || processingCounts.value.failed > 0));
 const processingProgress = computed(() => {
   const total = Number(processingCounts.value.total || 0);
@@ -314,8 +360,12 @@ const processingSummaryText = computed(() => {
   return `${pending} pendentes e ${processing} em processamento na fila.`;
 });
 
-const onPriceInput = () => {
-  form.valor = formatCurrencyBRL(form.valor);
+const onSalePriceInput = () => {
+  form.valor_venda = formatCurrencyBRL(form.valor_venda);
+};
+
+const onRentPriceInput = () => {
+  form.valor_locacao = formatCurrencyBRL(form.valor_locacao);
 };
 
 async function refreshProcessingStatus() {

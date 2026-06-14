@@ -34,6 +34,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class AdminController extends Controller
@@ -231,24 +232,51 @@ class AdminController extends Controller
             'range_label' => $this->dashboardRangeLabel($activePreset),
         ];
 
+        $businessCount = function (string $kind, ?array $range = null): int {
+            $query = Property::query()->where('ativo', true);
+
+            if ($range) {
+                $query->whereBetween('created_at', $range);
+            }
+
+            if ($kind === 'sale') {
+                $query->where(function ($sub): void {
+                    $sub->where('aceita_venda', true)
+                        ->orWhere('operacao', 'Venda');
+                });
+            } elseif ($kind === 'rent') {
+                $query->where(function ($sub): void {
+                    $sub->where('aceita_locacao', true)
+                        ->orWhere('operacao', 'Aluguel');
+                });
+            } elseif ($kind === 'season') {
+                $query->where(function ($sub): void {
+                    $sub->where('aceita_temporada', true)
+                        ->orWhere('operacao', 'Temporada');
+                });
+            }
+
+            return $query->count();
+        };
+
         $propertyStatus = [
-            'sale' => Property::query()->where('ativo', true)->where('operacao', 'Venda')->count(),
-            'rent' => Property::query()->where('ativo', true)->where('operacao', 'Aluguel')->count(),
-            'season' => Property::query()->where('ativo', true)->where('operacao', 'Temporada')->count(),
+            'sale' => $businessCount('sale'),
+            'rent' => $businessCount('rent'),
+            'season' => $businessCount('season'),
             'exclusive' => $hasExclusive ? Property::query()->where('ativo', true)->where('is_exclusive', true)->count() : 0,
             'off_market' => $hasOffMarket ? Property::query()->where('ativo', true)->where('is_off_market', true)->count() : 0,
             'inactive' => Property::query()->where('ativo', false)->count(),
             'sale_delta' => $this->percentDelta(
-                Property::query()->where('ativo', true)->where('operacao', 'Venda')->whereBetween('created_at', [$rangeStart, $rangeEnd])->count(),
-                Property::query()->where('ativo', true)->where('operacao', 'Venda')->whereBetween('created_at', [$prevStart, $prevEnd])->count()
+                $businessCount('sale', [$rangeStart, $rangeEnd]),
+                $businessCount('sale', [$prevStart, $prevEnd])
             ),
             'rent_delta' => $this->percentDelta(
-                Property::query()->where('ativo', true)->where('operacao', 'Aluguel')->whereBetween('created_at', [$rangeStart, $rangeEnd])->count(),
-                Property::query()->where('ativo', true)->where('operacao', 'Aluguel')->whereBetween('created_at', [$prevStart, $prevEnd])->count()
+                $businessCount('rent', [$rangeStart, $rangeEnd]),
+                $businessCount('rent', [$prevStart, $prevEnd])
             ),
             'season_delta' => $this->percentDelta(
-                Property::query()->where('ativo', true)->where('operacao', 'Temporada')->whereBetween('created_at', [$rangeStart, $rangeEnd])->count(),
-                Property::query()->where('ativo', true)->where('operacao', 'Temporada')->whereBetween('created_at', [$prevStart, $prevEnd])->count()
+                $businessCount('season', [$rangeStart, $rangeEnd]),
+                $businessCount('season', [$prevStart, $prevEnd])
             ),
             'exclusive_delta' => $hasExclusive ? $this->percentDelta(
                 Property::query()->where('ativo', true)->where('is_exclusive', true)->whereBetween('created_at', [$rangeStart, $rangeEnd])->count(),
@@ -939,18 +967,30 @@ class AdminController extends Controller
                 $codigoReferencia = $this->generateUniqueCodigoReferencia();
             }
             $codigoAnuncio = $this->generateUniqueCodigoAnuncio();
-            $businessType = BusinessType::find($validated['business_type_id']);
-            $valor = $this->parseBrlCurrency($validated['valor']);
+            $selectedBusinessTypes = $this->resolveSelectedBusinessTypes($validated['business_type_ids'] ?? []);
+            $businessPayload = $this->buildBusinessPayload($selectedBusinessTypes, $validated);
+
+            if (!$businessPayload['has_any_business']) {
+                throw ValidationException::withMessages([
+                    'business_type_ids' => 'Selecione ao menos um tipo de negocio.',
+                ]);
+            }
 
             $property = Property::create([
-                ...collect($validated)->except(['featured_upload_token', 'gallery_upload_tokens', 'special_category_ids'])->all(),
+                ...collect($validated)->except([
+                    'featured_upload_token',
+                    'gallery_upload_tokens',
+                    'special_category_ids',
+                    'business_type_ids',
+                    'valor_venda',
+                    'valor_locacao',
+                ])->all(),
                 'codigo_referencia' => $codigoReferencia,
                 'slug' => $slug,
                 'codigo_anuncio' => $codigoAnuncio,
                 'moeda' => 'BRL',
                 'ativo' => true,
-                'valor' => $valor,
-                'operacao' => $this->mapBusinessTypeNameToLegacyOperacao($businessType?->name),
+                ...$businessPayload['attributes'],
             ]);
 
             if (!empty($validated['special_category_ids'])) {
@@ -972,6 +1012,8 @@ class AdminController extends Controller
 
             return Redirect::route('admin.properties')
                 ->with('success', 'Imovel cadastrado com sucesso.');
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Throwable $e) {
             Log::error('Falha ao cadastrar imovel.', [
                 'user_id' => $request->user()?->id,
@@ -1024,8 +1066,14 @@ class AdminController extends Controller
             'gallery_tokens_unique' => count(array_unique($galleryTokens)),
         ]);
 
-        $businessType = BusinessType::find($validated['business_type_id']);
-        $valor = $this->parseBrlCurrency($validated['valor']);
+        $selectedBusinessTypes = $this->resolveSelectedBusinessTypes($validated['business_type_ids'] ?? []);
+        $businessPayload = $this->buildBusinessPayload($selectedBusinessTypes, $validated);
+
+        if (!$businessPayload['has_any_business']) {
+            throw ValidationException::withMessages([
+                'business_type_ids' => 'Selecione ao menos um tipo de negocio.',
+            ]);
+        }
 
         $codigoReferencia = $this->normalizeCodigoReferencia($validated['codigo_referencia'] ?? null);
         if ($codigoReferencia === '') {
@@ -1039,11 +1087,12 @@ class AdminController extends Controller
                 'remove_photo_ids',
                 'photo_order_ids',
                 'special_category_ids',
-                'valor',
+                'business_type_ids',
+                'valor_venda',
+                'valor_locacao',
             ])->all(),
             'codigo_referencia' => $codigoReferencia,
-            'valor' => $valor,
-            'operacao' => $this->mapBusinessTypeNameToLegacyOperacao($businessType?->name),
+            ...$businessPayload['attributes'],
         ]);
         $property->save();
 
@@ -1274,6 +1323,73 @@ class AdminController extends Controller
         $value = str_replace(',', '.', $value);
 
         return (float) $value;
+    }
+
+    private function parseBrlCurrencyNullable(?string $input): ?float
+    {
+        $raw = trim((string) ($input ?? ''));
+        if ($raw === '') {
+            return null;
+        }
+
+        $value = $this->parseBrlCurrency($raw);
+
+        return $value > 0 ? $value : null;
+    }
+
+    private function resolveSelectedBusinessTypes(array $ids): \Illuminate\Support\Collection
+    {
+        $normalizedIds = collect($ids)
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($normalizedIds->isEmpty()) {
+            return collect();
+        }
+
+        return BusinessType::query()
+            ->whereIn('id', $normalizedIds->all())
+            ->get(['id', 'name'])
+            ->sortBy(fn (BusinessType $type) => $normalizedIds->search($type->id))
+            ->values();
+    }
+
+    private function buildBusinessPayload(\Illuminate\Support\Collection $businessTypes, array $validated): array
+    {
+        $selectedNames = $businessTypes
+            ->pluck('name')
+            ->map(fn ($name) => trim((string) $name))
+            ->filter()
+            ->values();
+
+        $salePrice = $this->parseBrlCurrencyNullable($validated['valor_venda'] ?? null);
+        $rentPrice = $this->parseBrlCurrencyNullable($validated['valor_locacao'] ?? null);
+
+        $acceptsSale = $selectedNames->contains('Comprar');
+        $acceptsRent = $selectedNames->contains('Alugar');
+        $acceptsSeason = $selectedNames->contains('Temporada');
+        $primaryBusinessType = $businessTypes->first();
+        $legacyOperation = $this->mapBusinessTypeNameToLegacyOperacao($primaryBusinessType?->name);
+        $legacyValue = $salePrice
+            ?? $rentPrice
+            ?? ($acceptsSeason ? 0.0 : 0.0);
+
+        return [
+            'has_any_business' => $acceptsSale || $acceptsRent || $acceptsSeason,
+            'attributes' => [
+                'business_type_id' => $primaryBusinessType?->id,
+                'operacao' => $legacyOperation,
+                'valor' => $legacyValue,
+                'valor_venda' => $salePrice,
+                'valor_locacao' => $rentPrice,
+                'aceita_venda' => $acceptsSale,
+                'aceita_locacao' => $acceptsRent,
+                'aceita_temporada' => $acceptsSeason,
+            ],
+        ];
     }
 
     private function mapBusinessTypeNameToLegacyOperacao(?string $businessTypeName): string

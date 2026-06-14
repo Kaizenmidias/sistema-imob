@@ -56,12 +56,14 @@ class HomeController extends Controller
                 'title' => $property->titulo,
                 'address' => trim($property->endereco . ' - ' . $property->bairro . ', ' . $property->cidade . '/' . $property->estado),
                 'location' => trim(($property->bairro ? $property->bairro . ' - ' : '') . $property->cidade),
-                'price' => (float) $property->valor,
+                'price' => $this->primaryPublicPriceValue($property),
+                'prices' => $this->propertyPublicPrices($property),
                 'bedrooms' => (int) ($property->quartos ?? 0),
                 'bathrooms' => (int) ($property->banheiros ?? 0),
                 'area' => (float) ($property->area_util ?? 0),
                 'lotArea' => (float) ($property->area_total ?? 0),
-                'type' => $property->businessType?->name ?? $property->operacao,
+                'type' => $property->primaryBusinessLabel(),
+                'businessLabels' => $property->businessLabels(),
                 'photo' => $this->propertyPhotoCardUrl($photo),
                 'photos' => $photoUrls,
             ];
@@ -201,7 +203,8 @@ class HomeController extends Controller
 
         $businessTypeId = (int) ($filters['business_type_id'] ?? 0);
         if ($businessTypeId > 0) {
-            $query->where('business_type_id', $businessTypeId);
+            $selectedBusinessType = $businessTypes->firstWhere('id', $businessTypeId);
+            $this->applyBusinessTypeFilter($query, $selectedBusinessType);
         }
 
         $propertyType = trim((string) ($filters['property_type'] ?? ''));
@@ -222,12 +225,14 @@ class HomeController extends Controller
 
         $priceMin = $this->parseBrlCurrencyNullable($filters['price_min'] ?? null);
         if ($priceMin !== null) {
-            $query->where('valor', '>=', $priceMin);
+            $selectedBusinessType = $businessTypeId > 0 ? $businessTypes->firstWhere('id', $businessTypeId) : null;
+            $this->applyMinPriceFilter($query, $priceMin, $selectedBusinessType);
         }
 
         $priceMax = $this->parseBrlCurrencyNullable($filters['price_max'] ?? null);
         if ($priceMax !== null) {
-            $query->where('valor', '<=', $priceMax);
+            $selectedBusinessType = $businessTypeId > 0 ? $businessTypes->firstWhere('id', $businessTypeId) : null;
+            $this->applyMaxPriceFilter($query, $priceMax, $selectedBusinessType);
         }
 
         $bedroomsMin = $this->parseIntNullable($filters['bedrooms_min'] ?? null);
@@ -272,9 +277,11 @@ class HomeController extends Controller
 
         $sort = (string) ($filters['sort'] ?? '');
         if ($sort === 'price_asc') {
-            $query->orderBy('valor');
+            $selectedBusinessType = $businessTypeId > 0 ? $businessTypes->firstWhere('id', $businessTypeId) : null;
+            $query->orderByRaw($this->priceSortExpression($selectedBusinessType) . ' asc');
         } elseif ($sort === 'price_desc') {
-            $query->orderByDesc('valor');
+            $selectedBusinessType = $businessTypeId > 0 ? $businessTypes->firstWhere('id', $businessTypeId) : null;
+            $query->orderByRaw($this->priceSortExpression($selectedBusinessType) . ' desc');
         } else {
             $query->orderByDesc('created_at');
             $filters['sort'] = 'newest';
@@ -302,14 +309,16 @@ class HomeController extends Controller
                     'title' => $property->titulo,
                     'address' => trim($property->endereco . ' - ' . $property->bairro . ', ' . $property->cidade . '/' . $property->estado),
                     'location' => trim(($property->bairro ? $property->bairro . ' - ' : '') . $property->cidade),
-                    'price' => (float) $property->valor,
+                    'price' => $this->primaryPublicPriceValue($property),
+                    'prices' => $this->propertyPublicPrices($property),
                     'bedrooms' => (int) ($property->quartos ?? 0),
                     'suites' => (int) ($property->suites ?? 0),
                     'bathrooms' => (int) ($property->banheiros ?? 0),
                     'garages' => (int) ($property->garagens ?? 0),
                     'area' => (float) ($property->area_util ?? 0),
                     'lotArea' => (float) ($property->area_total ?? 0),
-                    'type' => $property->businessType?->name ?? $property->operacao,
+                    'type' => $property->primaryBusinessLabel(),
+                    'businessLabels' => $property->businessLabels(),
                     'photo' => $this->propertyPhotoCardUrl($photo),
                     'photos' => $photoUrls,
                 ];
@@ -559,8 +568,10 @@ class HomeController extends Controller
             'slug' => $propertyModel->slug,
             'title' => $propertyModel->titulo,
             'address' => trim($propertyModel->endereco . ' - ' . $propertyModel->bairro . ', ' . $propertyModel->cidade . '/' . $propertyModel->estado),
-            'price' => (float) $propertyModel->valor,
-            'type' => $propertyModel->businessType?->name ?? $propertyModel->operacao,
+            'price' => $this->primaryPublicPriceValue($propertyModel),
+            'prices' => $this->propertyPublicPrices($propertyModel),
+            'type' => $propertyModel->primaryBusinessLabel(),
+            'businessLabels' => $propertyModel->businessLabels(),
             'propertyType' => $propertyModel->propertyType?->nome_tipo ?? '',
             'code' => $propertyModel->codigo_referencia ?: $propertyModel->codigo_anuncio,
             'bedrooms' => (int) ($propertyModel->quartos ?? 0),
@@ -714,16 +725,138 @@ class HomeController extends Controller
         return '<![CDATA[' . $s . ']]>';
     }
 
+    private function applyBusinessTypeFilter($query, ?BusinessType $businessType): void
+    {
+        $name = trim((string) ($businessType?->name ?? ''));
+
+        if ($name === 'Comprar') {
+            $query->where(function ($sub): void {
+                $sub->where('aceita_venda', true)
+                    ->orWhere('operacao', 'Venda');
+            });
+            return;
+        }
+
+        if ($name === 'Alugar') {
+            $query->where(function ($sub): void {
+                $sub->where('aceita_locacao', true)
+                    ->orWhere('operacao', 'Aluguel');
+            });
+            return;
+        }
+
+        if ($name === 'Temporada') {
+            $query->where(function ($sub): void {
+                $sub->where('aceita_temporada', true)
+                    ->orWhere('operacao', 'Temporada');
+            });
+        }
+    }
+
+    private function applyMinPriceFilter($query, float $priceMin, ?BusinessType $businessType): void
+    {
+        $name = trim((string) ($businessType?->name ?? ''));
+
+        if ($name === 'Comprar') {
+            $query->where(function ($sub) use ($priceMin): void {
+                $sub->where('valor_venda', '>=', $priceMin)
+                    ->orWhere(function ($legacy) use ($priceMin): void {
+                        $legacy->whereNull('valor_venda')
+                            ->where('valor', '>=', $priceMin)
+                            ->where('operacao', 'Venda');
+                    });
+            });
+            return;
+        }
+
+        if ($name === 'Alugar') {
+            $query->where(function ($sub) use ($priceMin): void {
+                $sub->where('valor_locacao', '>=', $priceMin)
+                    ->orWhere(function ($legacy) use ($priceMin): void {
+                        $legacy->whereNull('valor_locacao')
+                            ->where('valor', '>=', $priceMin)
+                            ->where('operacao', 'Aluguel');
+                    });
+            });
+            return;
+        }
+
+        $query->where(function ($sub) use ($priceMin): void {
+            $sub->where('valor_venda', '>=', $priceMin)
+                ->orWhere('valor_locacao', '>=', $priceMin)
+                ->orWhere('valor', '>=', $priceMin);
+        });
+    }
+
+    private function applyMaxPriceFilter($query, float $priceMax, ?BusinessType $businessType): void
+    {
+        $name = trim((string) ($businessType?->name ?? ''));
+
+        if ($name === 'Comprar') {
+            $query->where(function ($sub) use ($priceMax): void {
+                $sub->where('valor_venda', '<=', $priceMax)
+                    ->orWhere(function ($legacy) use ($priceMax): void {
+                        $legacy->whereNull('valor_venda')
+                            ->where('valor', '<=', $priceMax)
+                            ->where('operacao', 'Venda');
+                    });
+            });
+            return;
+        }
+
+        if ($name === 'Alugar') {
+            $query->where(function ($sub) use ($priceMax): void {
+                $sub->where('valor_locacao', '<=', $priceMax)
+                    ->orWhere(function ($legacy) use ($priceMax): void {
+                        $legacy->whereNull('valor_locacao')
+                            ->where('valor', '<=', $priceMax)
+                            ->where('operacao', 'Aluguel');
+                    });
+            });
+            return;
+        }
+
+        $query->where(function ($sub) use ($priceMax): void {
+            $sub->where('valor_venda', '<=', $priceMax)
+                ->orWhere('valor_locacao', '<=', $priceMax)
+                ->orWhere('valor', '<=', $priceMax);
+        });
+    }
+
+    private function priceSortExpression(?BusinessType $businessType): string
+    {
+        $name = trim((string) ($businessType?->name ?? ''));
+
+        if ($name === 'Comprar') {
+            return 'COALESCE(NULLIF(valor_venda, 0), NULLIF(valor, 0), 0)';
+        }
+
+        if ($name === 'Alugar') {
+            return 'COALESCE(NULLIF(valor_locacao, 0), NULLIF(valor, 0), 0)';
+        }
+
+        return 'COALESCE(NULLIF(valor_venda, 0), NULLIF(valor_locacao, 0), NULLIF(valor, 0), 0)';
+    }
+
+    private function propertyPublicPrices(Property $property): array
+    {
+        return $property->publicPrices()->values()->all();
+    }
+
+    private function primaryPublicPriceValue(Property $property): float
+    {
+        return (float) ($property->publicPrices()->first()['value'] ?? 0);
+    }
+
     private function mapOperacaoForXml(Property $property): string
     {
-        $name = $property->businessType?->name;
-        if ($name === 'Comprar') {
+        if ($property->aceita_venda) {
             return 'Venda';
         }
-        if ($name === 'Alugar') {
+        if ($property->aceita_locacao) {
             return 'Aluguel';
         }
-        if ($name === 'Temporada') {
+        if ($property->aceita_temporada) {
             return 'Temporada';
         }
         if (!empty($property->operacao)) {
