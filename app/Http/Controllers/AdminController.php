@@ -34,6 +34,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 class AdminController extends Controller
 {
@@ -921,53 +922,65 @@ class AdminController extends Controller
     public function storeProperty(StorePropertyRequest $request, AttachPropertyImageUploadsAction $attachUploads)
     {
         $validated = $request->validated();
-        $galleryTokens = $validated['gallery_upload_tokens'] ?? [];
 
-        Log::info('Iniciando cadastro de imovel com uploads temporarios.', [
-            'user_id' => $request->user()?->id,
-            'featured_upload_present' => !empty($validated['featured_upload_token']),
-            'gallery_tokens_received' => count($galleryTokens),
-            'gallery_tokens_unique' => count(array_unique($galleryTokens)),
-        ]);
+        try {
+            $galleryTokens = $validated['gallery_upload_tokens'] ?? [];
 
-        $slug = $this->generateUniquePropertySlug($validated['titulo']);
-        $codigoReferencia = $this->normalizeCodigoReferencia($validated['codigo_referencia'] ?? null);
-        if ($codigoReferencia === '') {
-            $codigoReferencia = $this->generateUniqueCodigoReferencia();
+            Log::info('Iniciando cadastro de imovel com uploads temporarios.', [
+                'user_id' => $request->user()?->id,
+                'featured_upload_present' => !empty($validated['featured_upload_token']),
+                'gallery_tokens_received' => count($galleryTokens),
+                'gallery_tokens_unique' => count(array_unique($galleryTokens)),
+            ]);
+
+            $slug = $this->generateUniquePropertySlug($validated['titulo']);
+            $codigoReferencia = $this->normalizeCodigoReferencia($validated['codigo_referencia'] ?? null);
+            if ($codigoReferencia === '') {
+                $codigoReferencia = $this->generateUniqueCodigoReferencia();
+            }
+            $codigoAnuncio = $this->generateUniqueCodigoAnuncio();
+            $businessType = BusinessType::find($validated['business_type_id']);
+            $valor = $this->parseBrlCurrency($validated['valor']);
+
+            $property = Property::create([
+                ...collect($validated)->except(['featured_upload_token', 'gallery_upload_tokens', 'special_category_ids'])->all(),
+                'codigo_referencia' => $codigoReferencia,
+                'slug' => $slug,
+                'codigo_anuncio' => $codigoAnuncio,
+                'moeda' => 'BRL',
+                'ativo' => true,
+                'valor' => $valor,
+                'operacao' => $this->mapBusinessTypeNameToLegacyOperacao($businessType?->name),
+            ]);
+
+            if (!empty($validated['special_category_ids'])) {
+                $property->specialCategories()->sync($validated['special_category_ids']);
+            }
+
+            $attachUploads->execute(
+                $property,
+                $request->user(),
+                $validated['featured_upload_token'] ?? null,
+                $galleryTokens
+            );
+
+            Log::info('Cadastro de imovel finalizado com uploads vinculados.', [
+                'property_id' => $property->id,
+                'user_id' => $request->user()?->id,
+                'property_photos_total' => $property->photos()->count(),
+            ]);
+
+            return Redirect::route('admin.properties')
+                ->with('success', 'Imovel cadastrado com sucesso.');
+        } catch (Throwable $e) {
+            Log::error('Falha ao cadastrar imovel.', [
+                'user_id' => $request->user()?->id,
+                'message' => $e->getMessage(),
+            ]);
+
+            return Redirect::route('admin.properties')
+                ->with('error', 'Nao foi possivel cadastrar o imovel. Tente novamente.');
         }
-        $codigoAnuncio = $this->generateUniqueCodigoAnuncio();
-        $businessType = BusinessType::find($validated['business_type_id']);
-        $valor = $this->parseBrlCurrency($validated['valor']);
-
-        $property = Property::create([
-            ...collect($validated)->except(['featured_upload_token', 'gallery_upload_tokens', 'special_category_ids'])->all(),
-            'codigo_referencia' => $codigoReferencia,
-            'slug' => $slug,
-            'codigo_anuncio' => $codigoAnuncio,
-            'moeda' => 'BRL',
-            'ativo' => true,
-            'valor' => $valor,
-            'operacao' => $this->mapBusinessTypeNameToLegacyOperacao($businessType?->name),
-        ]);
-
-        if (!empty($validated['special_category_ids'])) {
-            $property->specialCategories()->sync($validated['special_category_ids']);
-        }
-
-        $attachUploads->execute(
-            $property,
-            $request->user(),
-            $validated['featured_upload_token'] ?? null,
-            $galleryTokens
-        );
-
-        Log::info('Cadastro de imovel finalizado com uploads vinculados.', [
-            'property_id' => $property->id,
-            'user_id' => $request->user()?->id,
-            'property_photos_total' => $property->photos()->count(),
-        ]);
-
-        return Redirect::route('admin.properties.edit', ['property' => $property->id]);
     }
 
     public function editProperty(Property $property): Response

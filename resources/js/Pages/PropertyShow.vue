@@ -12,26 +12,7 @@
 
     <!-- Photo Gallery -->
     <div class="container mx-auto px-4 mb-8">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <!-- Main Photo -->
-        <div class="md:col-span-2 relative rounded-xl overflow-hidden shadow-lg">
-          <img
-            :src="activePhoto.full"
-            :alt="property.title"
-            class="w-full h-96 object-cover"
-            fetchpriority="high"
-          />
-        </div>
-        <!-- Thumbnails -->
-        <div class="grid grid-cols-2 gap-4">
-          <div v-for="(photo, index) in photos.slice(0, 4)" :key="index" class="relative rounded-xl overflow-hidden shadow-md cursor-pointer hover:opacity-80 transition">
-            <img :src="photo.thumb" :alt="`Foto ${index + 1}`" class="w-full h-44 object-cover" loading="lazy" @click="activePhotoIndex = index" />
-            <div v-if="index === 3 && photos.length > 4" class="absolute inset-0 bg-black/70 flex items-center justify-center text-white text-2xl font-bold">
-              +{{ photos.length - 4 }}
-            </div>
-          </div>
-        </div>
-      </div>
+      <PropertyGallery :images="photos" :initial-index="0" />
     </div>
 
     <!-- Property Content -->
@@ -220,8 +201,9 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useForm } from '@inertiajs/vue3';
+import PropertyGallery from '@/Components/PropertyGallery.vue';
 import Layout from '@/Shared/Layout.vue';
 
 const props = defineProps({
@@ -230,8 +212,6 @@ const props = defineProps({
     required: true,
   },
 });
-
-const activePhotoIndex = ref(0);
 
 const placeholderImage = `data:image/svg+xml,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
@@ -254,8 +234,6 @@ const photos = computed(() => {
   if (Array.isArray(list) && list.length > 0) return list;
   return [{ full: placeholderImage, medium: placeholderImage, thumb: placeholderImage }];
 });
-
-const activePhoto = computed(() => photos.value[activePhotoIndex.value] || photos.value[0]);
 
 const contactForm = useForm({
   property_id: props.property?.id ?? null,

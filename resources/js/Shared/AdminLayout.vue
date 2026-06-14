@@ -164,6 +164,18 @@
         </h1>
       </header>
       <div class="flex-1 overflow-auto p-4 md:p-6">
+        <div
+          v-if="flashMessage"
+          :class="flashType === 'error' ? 'border-red-200 bg-red-50 text-red-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'"
+          class="mb-6 rounded-xl border px-4 py-3 shadow-sm"
+        >
+          <div class="font-semibold">
+            {{ flashType === 'error' ? 'Nao foi possivel concluir a acao.' : 'Sucesso.' }}
+          </div>
+          <div class="mt-1 text-sm">
+            {{ flashMessage }}
+          </div>
+        </div>
         <slot></slot>
       </div>
     </main>
@@ -179,6 +191,9 @@ const user = computed(() => page.props?.auth?.user || null);
 const adminBase = computed(() => page.props?.paths?.admin || '/admin');
 const isAdmin = computed(() => user.value?.role === 'admin');
 const permissions = computed(() => (Array.isArray(user.value?.permissions) ? user.value.permissions.map((p) => String(p)) : []));
+const flash = computed(() => page.props?.flash || {});
+const flashType = computed(() => (flash.value?.error ? 'error' : (flash.value?.success ? 'success' : '')));
+const flashMessage = computed(() => flash.value?.error || flash.value?.success || '');
 
 const isSidebarOpen = ref(false);
 
