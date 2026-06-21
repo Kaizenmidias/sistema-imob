@@ -1041,12 +1041,15 @@ class AdminController extends Controller
                     'business_type_ids',
                     'valor_venda',
                     'valor_locacao',
+                    'valor_condominio',
+                    'valor_iptu',
                 ])->all(),
                 'codigo_referencia' => $codigoReferencia,
                 'slug' => $slug,
                 'codigo_anuncio' => $codigoAnuncio,
                 'moeda' => 'BRL',
                 'ativo' => true,
+                ...$this->buildPropertyAttributes($validated),
                 ...$businessPayload['attributes'],
             ]);
 
@@ -1149,8 +1152,11 @@ class AdminController extends Controller
                 'business_type_ids',
                 'valor_venda',
                 'valor_locacao',
+                'valor_condominio',
+                'valor_iptu',
             ])->all(),
             'codigo_referencia' => $codigoReferencia,
+            ...$this->buildPropertyAttributes($validated),
             ...$businessPayload['attributes'],
         ]);
         $property->save();
@@ -1394,6 +1400,51 @@ class AdminController extends Controller
         $value = $this->parseBrlCurrency($raw);
 
         return $value > 0 ? $value : null;
+    }
+
+    private function parseDecimalNullable(mixed $input): ?float
+    {
+        $raw = trim((string) ($input ?? ''));
+        if ($raw === '') {
+            return null;
+        }
+
+        $normalized = str_replace(' ', '', $raw);
+
+        if (str_contains($normalized, ',') && str_contains($normalized, '.')) {
+            $normalized = str_replace('.', '', $normalized);
+            $normalized = str_replace(',', '.', $normalized);
+        } else {
+            $normalized = str_replace(',', '.', $normalized);
+        }
+
+        if (!is_numeric($normalized)) {
+            return null;
+        }
+
+        $value = (float) $normalized;
+
+        return $value > 0 ? $value : null;
+    }
+
+    private function buildPropertyAttributes(array $validated): array
+    {
+        $builtArea = $this->parseDecimalNullable($validated['area_construida'] ?? null);
+        $totalArea = $this->parseDecimalNullable($validated['area_total'] ?? null);
+        $condominiumValue = $this->parseBrlCurrencyNullable($validated['valor_condominio'] ?? null);
+        $iptuValue = $this->parseBrlCurrencyNullable($validated['valor_iptu'] ?? null);
+
+        return [
+            'area_total' => $totalArea,
+            'area_construida' => $builtArea,
+            // Keep the legacy column synchronized for existing cards, feeds and integrations.
+            'area_util' => $builtArea,
+            'valor_condominio' => $condominiumValue,
+            'valor_iptu' => $iptuValue,
+            // Legacy aliases preserved for backward compatibility.
+            'condominio' => $condominiumValue,
+            'iptu' => $iptuValue,
+        ];
     }
 
     private function resolveSelectedBusinessTypes(array $ids): \Illuminate\Support\Collection

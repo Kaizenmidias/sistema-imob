@@ -102,31 +102,123 @@
             </div>
           </div>
           
-          <div class="grid grid-cols-3 gap-4">
-            <div>
-              <label class="block text-gray-700 mb-2 text-sm font-medium">Quartos</label>
-              <input v-model.number="form.quartos" type="number" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="0">
-              <div v-if="form.errors.quartos" class="text-sm text-red-600 mt-1">{{ form.errors.quartos }}</div>
-            </div>
-            <div>
-              <label class="block text-gray-700 mb-2 text-sm font-medium">Banheiros</label>
-              <input v-model.number="form.banheiros" type="number" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="0">
-              <div v-if="form.errors.banheiros" class="text-sm text-red-600 mt-1">{{ form.errors.banheiros }}</div>
-            </div>
-            <div>
-              <label class="block text-gray-700 mb-2 text-sm font-medium">Garagens</label>
-              <input v-model.number="form.garagens" type="number" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="0">
-              <div v-if="form.errors.garagens" class="text-sm text-red-600 mt-1">{{ form.errors.garagens }}</div>
+          <div class="rounded-xl border border-gray-200 bg-gray-50/70 p-5">
+            <div class="text-base font-semibold text-gray-900">Características do Imóvel</div>
+            <div class="mt-1 text-sm text-gray-500">Preencha apenas o que for aplicável. Campos vazios não serão exibidos no site.</div>
+
+            <div class="mt-5 space-y-5">
+              <div>
+                <div class="text-sm font-semibold text-gray-800 mb-3">Informações Gerais</div>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div>
+                    <label class="block text-gray-700 mb-2 text-sm font-medium">Quartos</label>
+                    <input v-model.number="form.quartos" type="number" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="0">
+                    <div v-if="form.errors.quartos" class="text-sm text-red-600 mt-1">{{ form.errors.quartos }}</div>
+                  </div>
+                  <div>
+                    <label class="block text-gray-700 mb-2 text-sm font-medium">Suítes</label>
+                    <input v-model.number="form.suites" type="number" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="0">
+                    <div v-if="form.errors.suites" class="text-sm text-red-600 mt-1">{{ form.errors.suites }}</div>
+                  </div>
+                  <div>
+                    <label class="block text-gray-700 mb-2 text-sm font-medium">Banheiros</label>
+                    <input v-model.number="form.banheiros" type="number" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="0">
+                    <div v-if="form.errors.banheiros" class="text-sm text-red-600 mt-1">{{ form.errors.banheiros }}</div>
+                  </div>
+                  <div>
+                    <label class="block text-gray-700 mb-2 text-sm font-medium">Lavabos</label>
+                    <input v-model.number="form.lavabos" type="number" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="0">
+                    <div v-if="form.errors.lavabos" class="text-sm text-red-600 mt-1">{{ form.errors.lavabos }}</div>
+                  </div>
+                  <div>
+                    <label class="block text-gray-700 mb-2 text-sm font-medium">Garagens</label>
+                    <input v-model.number="form.garagens" type="number" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="0">
+                    <div v-if="form.errors.garagens" class="text-sm text-red-600 mt-1">{{ form.errors.garagens }}</div>
+                  </div>
+                  <div>
+                    <label class="block text-gray-700 mb-2 text-sm font-medium">Andar</label>
+                    <input v-model.number="form.andar" type="number" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="0">
+                    <div v-if="form.errors.andar" class="text-sm text-red-600 mt-1">{{ form.errors.andar }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="text-sm font-semibold text-gray-800 mb-3">Áreas</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-gray-700 mb-2 text-sm font-medium">Área Total (m²)</label>
+                    <input v-model="form.area_total" type="number" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="0,00">
+                    <div v-if="form.errors.area_total" class="text-sm text-red-600 mt-1">{{ form.errors.area_total }}</div>
+                  </div>
+                  <div>
+                    <label class="block text-gray-700 mb-2 text-sm font-medium">Área Construída (m²)</label>
+                    <input v-model="form.area_construida" type="number" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="0,00">
+                    <div v-if="form.errors.area_construida" class="text-sm text-red-600 mt-1">{{ form.errors.area_construida }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="text-sm font-semibold text-gray-800 mb-3">Financeiro</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-gray-700 mb-2 text-sm font-medium">Valor do Condomínio</label>
+                    <input v-model="form.valor_condominio" type="text" inputmode="numeric" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="R$ 0,00" @input="onCondominiumPriceInput">
+                    <div v-if="form.errors.valor_condominio" class="text-sm text-red-600 mt-1">{{ form.errors.valor_condominio }}</div>
+                  </div>
+                  <div>
+                    <label class="block text-gray-700 mb-2 text-sm font-medium">Valor do IPTU</label>
+                    <input v-model="form.valor_iptu" type="text" inputmode="numeric" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="R$ 0,00" @input="onIptuPriceInput">
+                    <div v-if="form.errors.valor_iptu" class="text-sm text-red-600 mt-1">{{ form.errors.valor_iptu }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="text-sm font-semibold text-gray-800 mb-3">Comercial</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input v-model="form.aceita_permuta" type="checkbox" class="rounded border-gray-300">
+                    Aceita permuta
+                  </label>
+                  <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input v-model="form.aceita_financiamento" type="checkbox" class="rounded border-gray-300">
+                    Aceita financiamento
+                  </label>
+                </div>
+                <div v-if="form.errors.aceita_permuta" class="text-sm text-red-600 mt-1">{{ form.errors.aceita_permuta }}</div>
+                <div v-if="form.errors.aceita_financiamento" class="text-sm text-red-600 mt-1">{{ form.errors.aceita_financiamento }}</div>
+              </div>
+
+              <div>
+                <div class="text-sm font-semibold text-gray-800 mb-3">Características Extras</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label class="flex items-center gap-2 text-sm text-gray-700 md:mt-9">
+                    <input v-model="form.mobiliado" type="checkbox" class="rounded border-gray-300">
+                    Mobiliado
+                  </label>
+                  <div>
+                    <label class="block text-gray-700 mb-2 text-sm font-medium">Ano de Construção</label>
+                    <input v-model.number="form.ano_construcao" type="number" min="1800" :max="nextYear" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="2021">
+                    <div v-if="form.errors.ano_construcao" class="text-sm text-red-600 mt-1">{{ form.errors.ano_construcao }}</div>
+                  </div>
+                  <div class="md:col-span-2">
+                    <label class="block text-gray-700 mb-2 text-sm font-medium">Posição Solar</label>
+                    <select v-model="form.posicao_solar" class="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white">
+                      <option :value="null">Selecione a posição solar</option>
+                      <option v-for="option in solarPositionOptions" :key="option" :value="option">{{ option }}</option>
+                    </select>
+                    <div v-if="form.errors.posicao_solar" class="text-sm text-red-600 mt-1">{{ form.errors.posicao_solar }}</div>
+                  </div>
+                </div>
+                <div v-if="form.errors.mobiliado" class="text-sm text-red-600 mt-1">{{ form.errors.mobiliado }}</div>
+              </div>
             </div>
           </div>
         </div>
         
         <div class="space-y-6">
-          <div>
-            <label class="block text-gray-700 mb-2 text-sm font-medium">Área (m²)</label>
-            <input type="number" class="w-full border border-gray-300 rounded-lg px-4 py-3" placeholder="0">
-          </div>
-
           <div>
             <label class="block text-gray-700 mb-2 text-sm font-medium">Flags</label>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -271,9 +363,12 @@ const defaultBusinessTypeIds = computed(() => {
   const ids = getInitialBusinessTypeIds(props.property, props.businessTypes);
   return ids.length > 0 ? ids : (props.businessTypes[0]?.id ? [props.businessTypes[0].id] : []);
 });
+const solarPositionOptions = ['Norte', 'Sul', 'Leste', 'Oeste', 'Nordeste', 'Noroeste', 'Sudeste', 'Sudoeste'];
+const nextYear = new Date().getFullYear() + 1;
 
 const formatCurrencyNumberBRL = (value) => {
   const number = Number(value || 0);
+  if (!number) return '';
   return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
 
@@ -288,13 +383,25 @@ const form = useForm({
   business_type_ids: defaultBusinessTypeIds.value,
   valor_venda: formatCurrencyNumberBRL(props.property?.valor_venda),
   valor_locacao: formatCurrencyNumberBRL(props.property?.valor_locacao),
+  valor_condominio: formatCurrencyNumberBRL(props.property?.valor_condominio ?? props.property?.condominio),
+  valor_iptu: formatCurrencyNumberBRL(props.property?.valor_iptu ?? props.property?.iptu),
   endereco: props.property?.endereco || '',
   bairro: props.property?.bairro || '',
   cidade: props.property?.cidade || '',
   estado: props.property?.estado || 'SP',
   quartos: props.property?.quartos ?? null,
+  suites: props.property?.suites ?? null,
   banheiros: props.property?.banheiros ?? null,
+  lavabos: props.property?.lavabos ?? null,
   garagens: props.property?.garagens ?? null,
+  andar: props.property?.andar ?? null,
+  area_total: props.property?.area_total ?? null,
+  area_construida: props.property?.area_construida ?? props.property?.area_util ?? null,
+  aceita_permuta: !!props.property?.aceita_permuta,
+  aceita_financiamento: !!props.property?.aceita_financiamento,
+  mobiliado: !!props.property?.mobiliado,
+  ano_construcao: props.property?.ano_construcao ?? null,
+  posicao_solar: props.property?.posicao_solar ?? null,
   is_exclusive: !!props.property?.is_exclusive,
   is_off_market: !!props.property?.is_off_market,
   show_in_home_selecao_especial: !!props.property?.show_in_home_selecao_especial,
@@ -390,6 +497,35 @@ const onRentPriceInput = () => {
   form.valor_locacao = formatCurrencyBRL(form.valor_locacao);
 };
 
+const onCondominiumPriceInput = () => {
+  form.valor_condominio = formatCurrencyBRL(form.valor_condominio);
+};
+
+const onIptuPriceInput = () => {
+  form.valor_iptu = formatCurrencyBRL(form.valor_iptu);
+};
+
+function normalizeNullableNumber(value) {
+  return value === '' || value === undefined ? null : value;
+}
+
+function buildSubmissionData(data) {
+  return {
+    ...data,
+    quartos: normalizeNullableNumber(data.quartos),
+    suites: normalizeNullableNumber(data.suites),
+    banheiros: normalizeNullableNumber(data.banheiros),
+    lavabos: normalizeNullableNumber(data.lavabos),
+    garagens: normalizeNullableNumber(data.garagens),
+    andar: normalizeNullableNumber(data.andar),
+    area_total: normalizeNullableNumber(data.area_total),
+    area_construida: normalizeNullableNumber(data.area_construida),
+    ano_construcao: normalizeNullableNumber(data.ano_construcao),
+    posicao_solar: data.posicao_solar || null,
+    condominium_id: normalizeNullableNumber(data.condominium_id),
+  };
+}
+
 async function refreshProcessingStatus() {
   if (!isEdit.value || !props.property?.id) return;
 
@@ -441,11 +577,11 @@ const submit = () => {
   form.photo_order_ids = payload.photo_order_ids;
 
   if (isEdit.value) {
-    form.transform((data) => ({ ...data, _method: 'put' })).post(`${adminBase.value}/properties/${props.property.id}`, { forceFormData: true });
+    form.transform((data) => ({ ...buildSubmissionData(data), _method: 'put' })).post(`${adminBase.value}/properties/${props.property.id}`, { forceFormData: true });
     return;
   }
 
-  form.post(`${adminBase.value}/properties`, { forceFormData: true });
+  form.transform((data) => buildSubmissionData(data)).post(`${adminBase.value}/properties`, { forceFormData: true });
 };
 
 onMounted(() => {

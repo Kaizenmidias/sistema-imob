@@ -1,6 +1,5 @@
 <template>
   <Layout>
-    <!-- Back Button -->
     <div class="container mx-auto px-4 py-4">
       <a href="/imoveis" class="text-blue-800 hover:text-blue-600 flex items-center gap-2">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -10,27 +9,23 @@
       </a>
     </div>
 
-    <!-- Photo Gallery -->
     <div class="container mx-auto px-4 mb-8">
       <PropertyGallery :images="photos" :initial-index="0" />
     </div>
 
-    <!-- Property Content -->
     <div class="container mx-auto px-4 pb-12">
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Left Column -->
         <div class="lg:col-span-2">
-          <!-- Title & Quick Info -->
           <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
-              <div class="flex items-center gap-3 mb-2">
-                <span class="bg-blue-900 text-white px-4 py-1 rounded-full text-sm font-semibold">{{ property.code }}</span>
-                <span class="bg-orange-500 text-white px-4 py-1 rounded-full text-sm font-semibold">EXCLUSIVO</span>
+              <div class="flex flex-wrap items-center gap-3 mb-2">
+                <span v-if="property.code" class="bg-blue-900 text-white px-4 py-1 rounded-full text-sm font-semibold">{{ property.code }}</span>
+                <span v-if="property.isExclusive" class="bg-orange-500 text-white px-4 py-1 rounded-full text-sm font-semibold">EXCLUSIVO</span>
                 <span class="bg-gray-200 text-gray-700 px-4 py-1 rounded-full text-sm font-semibold">{{ photos.length }} Fotos</span>
               </div>
               <h1 class="text-2xl font-bold text-gray-800 mb-1">{{ property.title }}</h1>
               <p class="text-gray-600">{{ property.address }}</p>
-              <p v-if="property.condominium" class="text-sm text-gray-500 mt-1">Condomínio: {{ property.condominium }}</p>
+              <p v-if="property.condominiumName" class="text-sm text-gray-500 mt-1">Condomínio: {{ property.condominiumName }}</p>
             </div>
             <div class="flex items-center gap-3">
               <button class="p-2 border border-gray-300 rounded-full hover:bg-gray-50">
@@ -47,45 +42,64 @@
             </div>
           </div>
 
-          <!-- Features -->
-          <div class="flex flex-wrap gap-4 mb-6">
-            <div class="flex items-center gap-2 text-gray-600">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-              {{ property.bedrooms }} quartos (1 suíte)
-            </div>
-            <div class="flex items-center gap-2 text-gray-600">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
-              </svg>
-              {{ property.bathrooms }} vaga(s)
-            </div>
-            <div class="flex items-center gap-2 text-gray-600">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5a2 2 0 012-2z" />
-              </svg>
-              {{ property.garages }} m² Área Privativa
-            </div>
-            <div class="flex items-center gap-2 text-gray-600">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h4a2 2 0 012 2v12a2 2 0 01-2 2h-4a2 2 0 01-2-2V6zM19 12a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2v-4zM15 14a2 2 0 01-2 2H7a2 2 0 01-2-2v-6a2 2 0 012-2h6a2 2 0 012 2v6z" />
-              </svg>
-              {{ property.lotArea }} m² Área do Terreno
+          <div v-if="highlightItems.length" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
+            <div v-for="item in highlightItems" :key="item.label" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+              <div class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">{{ item.label }}</div>
+              <div class="mt-2 text-lg font-bold text-gray-900">{{ item.value }}</div>
             </div>
           </div>
 
-          <!-- Description -->
           <div class="mb-8">
             <h2 class="text-xl font-bold text-gray-800 mb-4">DESCRIÇÃO DO IMÓVEL</h2>
             <div class="text-gray-700 leading-relaxed space-y-4" v-html="property.description"></div>
           </div>
+
+          <div v-if="showDetailsSection" class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 class="text-xl font-bold text-gray-800">CARACTERÍSTICAS DO IMÓVEL</h2>
+
+            <div v-if="commercialFlags.length" class="mt-6">
+              <div class="text-sm font-semibold uppercase tracking-[0.18em] text-gray-500 mb-3">Comercial</div>
+              <div class="flex flex-wrap gap-3">
+                <span v-for="item in commercialFlags" :key="item" class="inline-flex items-center rounded-full bg-green-50 px-4 py-2 text-sm font-semibold text-green-700">
+                  {{ item }}
+                </span>
+              </div>
+            </div>
+
+            <div v-if="areaItems.length" class="mt-6">
+              <div class="text-sm font-semibold uppercase tracking-[0.18em] text-gray-500 mb-3">Áreas</div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div v-for="item in areaItems" :key="item.label" class="rounded-2xl bg-gray-50 px-4 py-4">
+                  <div class="text-sm text-gray-500">{{ item.label }}</div>
+                  <div class="mt-1 text-base font-semibold text-gray-900">{{ item.value }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="financialItems.length" class="mt-6">
+              <div class="text-sm font-semibold uppercase tracking-[0.18em] text-gray-500 mb-3">Financeiro</div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div v-for="item in financialItems" :key="item.label" class="rounded-2xl bg-gray-50 px-4 py-4">
+                  <div class="text-sm text-gray-500">{{ item.label }}</div>
+                  <div class="mt-1 text-base font-semibold text-gray-900">{{ item.value }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="extraItems.length" class="mt-6">
+              <div class="text-sm font-semibold uppercase tracking-[0.18em] text-gray-500 mb-3">Extras</div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div v-for="item in extraItems" :key="item.label" class="rounded-2xl bg-gray-50 px-4 py-4">
+                  <div class="text-sm text-gray-500">{{ item.label }}</div>
+                  <div class="mt-1 text-base font-semibold text-gray-900">{{ item.value }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Right Column - Sidebar -->
         <div class="lg:col-span-1">
           <div class="bg-white rounded-2xl shadow-lg p-6 sticky top-28 border border-gray-200">
-            <!-- Price & Type -->
             <div class="flex flex-wrap items-center gap-3 mb-4">
               <span
                 v-for="label in businessBadges"
@@ -112,19 +126,13 @@
               </div>
             </div>
 
-            <!-- Costs -->
-            <div class="space-y-3 mb-8">
-              <div class="flex items-center justify-between">
-                <span class="text-gray-500">Condomínio</span>
-                <span class="text-gray-800 font-medium">R$ {{ formatPrice(property.condominium) }}</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-gray-500">IPTU Mensal</span>
-                <span class="text-gray-800 font-medium">R$ {{ formatPrice(property.iptu) }}</span>
+            <div v-if="financialItems.length" class="space-y-3 mb-8">
+              <div v-for="item in financialItems" :key="item.label" class="flex items-center justify-between gap-3">
+                <span class="text-gray-500">{{ item.label }}</span>
+                <span class="text-gray-800 font-medium">{{ item.value }}</span>
               </div>
             </div>
 
-            <!-- Contact Form -->
             <div class="border-t border-gray-100 pt-6 mb-6">
               <form @submit.prevent="submitContact" class="space-y-4">
                 <div>
@@ -172,8 +180,7 @@
               </form>
             </div>
 
-            <!-- Schedule Visit -->
-            <div class="bg-gradient-to-br from-orange-100 to-orange-50 rounded-2xl p-6 border border-orange-200 mb-6">
+            <div class="bg-gradient-to-br from-orange-100 to-orange-50 rounded-2xl p-6 border border-orange-200">
               <div class="flex items-start gap-4">
                 <div class="p-3 bg-orange-700/20 rounded-full">
                   <svg class="w-7 h-7 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,23 +199,6 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </button>
-            </div>
-
-            <!-- Stats -->
-            <div class="flex items-center justify-between text-gray-500">
-              <div class="flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                <span>385 visualizações</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-                <span>1 salvos</span>
-              </div>
             </div>
           </div>
         </div>
@@ -289,6 +279,63 @@ const priceRows = computed(() => {
   return [];
 });
 
+const highlightItems = computed(() => {
+  const items = [
+    countItem('Quartos', props.property?.bedrooms, 'Quartos'),
+    countItem('Suítes', props.property?.suites, 'Suítes'),
+    countItem('Banheiros', props.property?.bathrooms, 'Banheiros'),
+    countItem('Lavabos', props.property?.lavabos, 'Lavabos'),
+    countItem('Vagas', props.property?.garages, 'Vagas'),
+    floorItem(props.property?.floor),
+  ];
+
+  return items.filter(Boolean);
+});
+
+const areaItems = computed(() => {
+  const items = [
+    measureItem('Área Total', props.property?.totalArea),
+    measureItem('Área Construída', props.property?.builtArea),
+  ];
+
+  return items.filter(Boolean);
+});
+
+const financialItems = computed(() => {
+  const items = [
+    currencyItem('Condomínio', props.property?.condominiumFee),
+    currencyItem('IPTU', props.property?.iptuFee),
+  ];
+
+  return items.filter(Boolean);
+});
+
+const commercialFlags = computed(() => {
+  const items = [];
+
+  if (props.property?.acceptsExchange) items.push('Aceita Permuta');
+  if (props.property?.acceptsFinancing) items.push('Aceita Financiamento');
+  if (props.property?.furnished) items.push('Mobiliado');
+
+  return items;
+});
+
+const extraItems = computed(() => {
+  const items = [
+    textItem('Posição Solar', props.property?.solarPosition),
+    numericItem('Ano de Construção', props.property?.constructionYear),
+  ];
+
+  return items.filter(Boolean);
+});
+
+const showDetailsSection = computed(() =>
+  commercialFlags.value.length > 0 ||
+  areaItems.value.length > 0 ||
+  financialItems.value.length > 0 ||
+  extraItems.value.length > 0
+);
+
 const contactForm = useForm({
   property_id: props.property?.id ?? null,
   nome: '',
@@ -298,13 +345,56 @@ const contactForm = useForm({
   origem: 'Site - Interesse no Imóvel',
 });
 
-function formatPrice(value) {
-  if (!value) return '0';
-  return value.toLocaleString('pt-BR', { minimumFractionDigits: 0 });
+function countItem(label, value, suffix) {
+  const number = Number(value || 0);
+  if (number <= 0) return null;
+  return { label, value: `${number} ${suffix}` };
+}
+
+function floorItem(value) {
+  const number = Number(value || 0);
+  if (number <= 0) return null;
+  return { label: 'Andar', value: `${number}º Andar` };
+}
+
+function measureItem(label, value) {
+  const number = Number(value || 0);
+  if (number <= 0) return null;
+  return { label, value: `${formatMeasure(number)} m²` };
+}
+
+function currencyItem(label, value) {
+  const number = Number(value || 0);
+  if (number <= 0) return null;
+  return { label, value: formatCurrencyBRL(number) };
+}
+
+function textItem(label, value) {
+  const text = String(value || '').trim();
+  if (!text) return null;
+  return { label, value: text };
+}
+
+function numericItem(label, value) {
+  const number = Number(value || 0);
+  if (number <= 0) return null;
+  return { label, value: String(number) };
+}
+
+function formatMeasure(value) {
+  return Number(value || 0).toLocaleString('pt-BR', {
+    minimumFractionDigits: Number(value || 0) % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function formatCurrencyBRL(value) {
-  return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return Number(value || 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function submitContact() {

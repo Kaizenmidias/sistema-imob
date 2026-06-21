@@ -48,6 +48,8 @@ class HomeController extends Controller
                 ->filter()
                 ->values()
                 ->all();
+            $builtArea = (float) ($property->area_construida ?? $property->area_util ?? 0);
+            $totalArea = (float) ($property->area_total ?? 0);
 
             return [
                 'id' => $property->id,
@@ -60,9 +62,13 @@ class HomeController extends Controller
                 'price' => $this->primaryPublicPriceValue($property),
                 'prices' => $this->propertyPublicPrices($property),
                 'bedrooms' => (int) ($property->quartos ?? 0),
+                'suites' => (int) ($property->suites ?? 0),
                 'bathrooms' => (int) ($property->banheiros ?? 0),
-                'area' => (float) ($property->area_util ?? 0),
-                'lotArea' => (float) ($property->area_total ?? 0),
+                'garages' => (int) ($property->garagens ?? 0),
+                'area' => $builtArea,
+                'builtArea' => $builtArea,
+                'lotArea' => $totalArea,
+                'totalArea' => $totalArea,
                 'type' => $property->primaryBusinessLabel(),
                 'businessLabels' => $property->businessLabels(),
                 'condominium' => $property->condominium?->name,
@@ -330,6 +336,8 @@ class HomeController extends Controller
                     ->filter()
                     ->values()
                     ->all();
+                $builtArea = (float) ($property->area_construida ?? $property->area_util ?? 0);
+                $totalArea = (float) ($property->area_total ?? 0);
 
                 return [
                     'id' => $property->id,
@@ -345,8 +353,10 @@ class HomeController extends Controller
                     'suites' => (int) ($property->suites ?? 0),
                     'bathrooms' => (int) ($property->banheiros ?? 0),
                     'garages' => (int) ($property->garagens ?? 0),
-                    'area' => (float) ($property->area_util ?? 0),
-                    'lotArea' => (float) ($property->area_total ?? 0),
+                    'area' => $builtArea,
+                    'builtArea' => $builtArea,
+                    'lotArea' => $totalArea,
+                    'totalArea' => $totalArea,
                     'type' => $property->primaryBusinessLabel(),
                     'businessLabels' => $property->businessLabels(),
                     'condominium' => $property->condominium?->name,
@@ -604,16 +614,27 @@ class HomeController extends Controller
             'prices' => $this->propertyPublicPrices($propertyModel),
             'type' => $propertyModel->primaryBusinessLabel(),
             'businessLabels' => $propertyModel->businessLabels(),
-            'condominium' => $propertyModel->condominium?->name,
+            'condominiumName' => $propertyModel->condominium?->name,
             'propertyType' => $propertyModel->propertyType?->nome_tipo ?? '',
             'code' => $propertyModel->codigo_referencia ?: $propertyModel->codigo_anuncio,
             'bedrooms' => (int) ($propertyModel->quartos ?? 0),
+            'suites' => (int) ($propertyModel->suites ?? 0),
             'bathrooms' => (int) ($propertyModel->banheiros ?? 0),
+            'lavabos' => (int) ($propertyModel->lavabos ?? 0),
             'garages' => (int) ($propertyModel->garagens ?? 0),
-            'area' => (float) ($propertyModel->area_util ?? 0),
+            'floor' => (int) ($propertyModel->andar ?? 0),
+            'area' => (float) ($propertyModel->area_construida ?? $propertyModel->area_util ?? 0),
+            'builtArea' => (float) ($propertyModel->area_construida ?? $propertyModel->area_util ?? 0),
             'lotArea' => (float) ($propertyModel->area_total ?? 0),
-            'condominium' => (float) ($propertyModel->condominio ?? 0),
-            'iptu' => (float) ($propertyModel->iptu ?? 0),
+            'totalArea' => (float) ($propertyModel->area_total ?? 0),
+            'condominiumFee' => (float) ($propertyModel->valor_condominio ?? $propertyModel->condominio ?? 0),
+            'iptuFee' => (float) ($propertyModel->valor_iptu ?? $propertyModel->iptu ?? 0),
+            'acceptsExchange' => (bool) ($propertyModel->aceita_permuta ?? false),
+            'acceptsFinancing' => (bool) ($propertyModel->aceita_financiamento ?? false),
+            'furnished' => (bool) ($propertyModel->mobiliado ?? false),
+            'constructionYear' => (int) ($propertyModel->ano_construcao ?? 0),
+            'solarPosition' => $propertyModel->posicao_solar,
+            'isExclusive' => (bool) ($propertyModel->is_exclusive ?? false),
             'description' => $propertyModel->descricao,
             'photos' => $photos,
         ];
